@@ -51,14 +51,22 @@ npm run dev          # http://localhost:5173
 | `npm run preview` | Serve the production build locally |
 | `npm test` | Unit tests for the scheduling, projection, stats and formatting logic |
 | `npm run smoke` | Drives the built app in a real browser through every core flow |
+| `npm run serve` | Serves a built `dist/` with the dependency-free static server |
 | `npm run icons` | Regenerates the PWA icon set |
 
 ## Installing on your phone
 
 A PWA needs an HTTPS origin, so serve the build from somewhere with a
-certificate. The included GitHub Actions workflow publishes to GitHub Pages on
-every push to `main` — enable it once under **Settings → Pages → Source: GitHub
-Actions**. Then, on the phone:
+certificate. Two routes:
+
+- **Self-host it** on a machine you already leave running — see
+  [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md) for a macOS launchd service plus
+  Tailscale for HTTPS. `npm run serve` runs the same dependency-free static
+  server by hand.
+- **GitHub Pages** — the included workflow publishes on every push to `main`;
+  enable it once under **Settings → Pages → Source: GitHub Actions**.
+
+Then, on the phone:
 
 - **iOS** — open the URL in Safari, then Share → *Add to Home Screen*
 - **Android** — open in Chrome, then the menu → *Install app*
@@ -73,10 +81,14 @@ not offer *Add to Home Screen* as a real install over plain HTTP.
 ## Moving data between devices
 
 Storage is per-device and per-browser, so your phone and your desktop each hold
-their own copy. **Settings → Export backup** writes a single JSON file with
-everything in it; **Import backup** reads it back, either replacing what is
-there or merging into it. That is also the way to get a copy off a device before
-clearing its browser data.
+their own copy. **Hosting the app centrally does not change this** — the server
+sends the files, the browser keeps the data. There is no sync yet; see
+[docs/SELF-HOSTING.md](docs/SELF-HOSTING.md) for what that would take.
+
+**Settings → Export backup** writes a single JSON file with everything in it;
+**Import backup** reads it back, either replacing what is there or merging into
+it. That is also the way to get a copy off a device before clearing its browser
+data.
 
 On the same screen, *Ask the browser to keep this data* requests persistent
 storage, which stops the browser evicting the database when space runs low.
@@ -102,6 +114,7 @@ want that later; the importer already accepts the full data shape.
   sidebar on desktop
 
 ```
+server/     Dependency-free static server for self-hosting
 src/
   db/         Dexie schema, domain types, metric catalogue, seed data
   lib/        Scheduling, stock projection, stats, training and nutrition maths
