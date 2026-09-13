@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, uid } from '@/db/db';
+import { db, removeRecords, uid } from '@/db/db';
 import type { Exercise, SetLog } from '@/db/types';
 import { Page } from '@/components/Layout';
 import { Card, EmptyState, Field, Sheet, useConfirm, useToast } from '@/components/ui';
@@ -78,8 +78,9 @@ export default function WorkoutSession() {
     if (done.length === 0) {
       const discard = await confirm('Nothing was logged. Discard this session?', 'Discard');
       if (!discard) return;
-      await db.sets.where('workoutId').equals(workout.id).delete();
-      await db.workouts.delete(workout.id);
+      const orphans = await db.sets.where('workoutId').equals(workout.id).primaryKeys();
+      await removeRecords('sets', orphans);
+      await removeRecords('workouts', [workout.id]);
       navigate('/training');
       return;
     }
@@ -142,7 +143,7 @@ export default function WorkoutSession() {
             onRemove={async () => {
               const ok = await confirm('Remove this exercise and its sets?', 'Remove');
               if (!ok) return;
-              await db.sets.bulkDelete(group.sets.map((s) => s.id));
+              await removeRecords('sets', group.sets.map((s) => s.id));
             }}
           />
         ))

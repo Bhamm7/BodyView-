@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useEffect, type ReactNode } from 'react';
 import { useSettings } from '@/hooks/useData';
+import { useAutoSync } from '@/hooks/useSync';
 
 interface NavItem {
   to: string;
@@ -33,6 +34,8 @@ function useTheme() {
 
 export function Layout() {
   useTheme();
+  // Mounted once here so the whole app stays in step with the server.
+  useAutoSync();
   const { pathname } = useLocation();
 
   // A fresh route should start at the top, not wherever the last one was.

@@ -1,4 +1,4 @@
-import { db, uid } from '@/db/db';
+import { db, removeRecord, uid } from '@/db/db';
 import type { DoseLog, ID, ISODate, Protocol } from '@/db/types';
 import { combineDateTime, nowTime } from './date';
 import { isScheduledOn } from './schedule';
@@ -135,7 +135,7 @@ export async function skipDose(due: DueDose, date: ISODate): Promise<void> {
 
 /** Undoes a logged dose, returning it to stock when it was actually taken. */
 export async function undoDose(log: DoseLog): Promise<void> {
-  await db.doses.delete(log.id);
+  await removeRecord('doses', log.id);
   if (!log.skipped) await restoreToInventory(log.compoundId, log.dose, log.unit);
 }
 

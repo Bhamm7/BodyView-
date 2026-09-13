@@ -5,6 +5,8 @@ import type { MetricKey, ThemePref } from '@/db/types';
 import { Page } from '@/components/Layout';
 import { Card, Field, NumberInput, Segmented, useConfirm, useToast } from '@/components/ui';
 import { useSettings } from '@/hooks/useData';
+import { SyncSettings } from '@/components/SyncSettings';
+import { useSyncState } from '@/hooks/useSync';
 import {
   downloadBackup,
   importBackup,
@@ -16,6 +18,7 @@ import { num } from '@/lib/format';
 /** Units, theme, dashboard layout, backup and data management. */
 export default function SettingsPage() {
   const [settings, update] = useSettings();
+  const syncState = useSyncState();
   const toast = useToast();
   const { confirm, dialog } = useConfirm();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -155,11 +158,13 @@ export default function SettingsPage() {
         </div>
       </Card>
 
+      <SyncSettings />
+
       <Card title="Your data">
         <p className="small muted">
-          BodyView stores everything in this browser on this device. Nothing is uploaded, and there
-          is no account. That also means a cleared browser takes your history with it — export a
-          backup regularly, and use it to move between your phone and desktop.
+          {syncState?.enabled && syncState.serverUrl
+            ? 'This device keeps a full local copy and syncs it with your server, so it still works offline. A backup file is still worth keeping — it is the only copy that survives losing both.'
+            : 'BodyView stores everything in this browser on this device. Nothing is uploaded, and there is no account. That also means a cleared browser takes your history with it — export a backup regularly, and use it to move between your phone and desktop.'}
         </p>
 
         <div className="col tight" style={{ marginTop: 'var(--sp-3)' }}>
@@ -214,7 +219,9 @@ export default function SettingsPage() {
           className="btn danger block"
           onClick={async () => {
             const ok = await confirm(
-              'This permanently deletes every metric, dose, meal, workout and stock item on this device. Export a backup first if you want to keep it.',
+              syncState?.enabled && syncState.serverUrl
+                ? 'This deletes every record on this device. Your server still has its copy and will send it all back on the next sync — disconnect first if you meant to start over.'
+                : 'This permanently deletes every metric, dose, meal, workout and stock item on this device. Export a backup first if you want to keep it.',
               'Erase everything',
             );
             if (!ok) return;

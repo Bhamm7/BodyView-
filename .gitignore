@@ -3,6 +3,11 @@ dist/
 dist-ssr/
 .test-build/
 .smoke/
+.smoke-sync/
+data/
+*.db
+*.db-wal
+*.db-shm
 *.local
 .DS_Store
 .vscode/*

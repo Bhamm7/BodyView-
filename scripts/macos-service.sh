@@ -7,6 +7,8 @@
 #   ./scripts/macos-service.sh restart     restart the service
 #   ./scripts/macos-service.sh status      is it running, and on what port
 #   ./scripts/macos-service.sh logs        tail the service log
+#   ./scripts/macos-service.sh backup [dir] snapshot the SQLite database
+#   ./scripts/macos-service.sh sql         open a sqlite3 shell on the database
 #   ./scripts/macos-service.sh uninstall   stop and remove the service
 #
 # Installs a LaunchAgent (per-user, no sudo). It starts at login and is
@@ -22,6 +24,8 @@ DOMAIN="gui/$(id -u)"
 
 PORT="${BODYVIEW_PORT:-8787}"
 HOST="${BODYVIEW_HOST:-127.0.0.1}"
+DB_FILE="${BODYVIEW_DB:-$HOME/Library/Application Support/BodyView/bodyview.db}"
+TOKEN="${BODYVIEW_TOKEN:-}"
 
 die() { printf '\033[31merror:\033[0m %s\n' "$1" >&2; exit 1; }
 info() { printf '\033[36m==>\033[0m %s\n' "$1"; }
@@ -56,7 +60,7 @@ build() {
 
 write_plist() {
   local node_path="$1"
-  mkdir -p "$HOME/Library/LaunchAgents" "$LOG_DIR"
+  mkdir -p "$HOME/Library/LaunchAgents" "$LOG_DIR" "$(dirname "$DB_FILE")"
   cat > "$PLIST" <<PLISTEOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -79,6 +83,8 @@ write_plist() {
     <key>PORT</key><string>$PORT</string>
     <key>HOST</key><string>$HOST</string>
     <key>ROOT</key><string>$REPO/dist</string>
+    <key>BODYVIEW_DB</key><string>$DB_FILE</string>
+    <key>BODYVIEW_TOKEN</key><string>$TOKEN</string>
     <key>NODE_ENV</key><string>production</string>
   </dict>
 
@@ -120,6 +126,8 @@ cmd_install() {
 
   cat <<NEXT
 
+Database: $DB_FILE
+
 Next: give it HTTPS so the PWA installs properly on your phone.
 See docs/SELF-HOSTING.md — the short version, with Tailscale installed
 on both the Mac mini and the phone:
@@ -128,6 +136,9 @@ on both the Mac mini and the phone:
 
 That publishes it at https://<this-mac>.<your-tailnet>.ts.net, privately,
 with a real certificate and no ports open to the internet.
+
+Then open that address on each device and, in Settings -> Sync, connect it.
+Every device then shares this one database.
 NEXT
 }
 
@@ -136,7 +147,22 @@ cmd_uninstall() {
   info "Stopping and removing the service"
   bootout_quiet
   rm -f "$PLIST"
-  ok "removed (logs kept in $LOG_DIR)"
+  ok "removed — your database at $DB_FILE is untouched"
+}
+
+# Backing up the database needs SQLite's own backup command: copying the file
+# while the server is writing can capture a torn WAL.
+cmd_backup() {
+  require_macos
+  local dest="${2:-$HOME/Library/Application Support/BodyView/backups}"
+  mkdir -p "$dest"
+  local target="$dest/bodyview-$(date +%Y%m%d-%H%M%S).db"
+  sqlite3 "$DB_FILE" ".backup '$target'"
+  ok "wrote $target"
+}
+
+cmd_sql() {
+  exec sqlite3 "$DB_FILE"
 }
 
 cmd_restart() {
@@ -179,8 +205,10 @@ case "${1:-}" in
   update)    cmd_update ;;
   status)    cmd_status ;;
   logs)      cmd_logs ;;
+  backup)    cmd_backup "$@" ;;
+  sql)       cmd_sql ;;
   *)
-    sed -n '3,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    sed -n '3,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
     exit 1
     ;;
 esac

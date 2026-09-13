@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, uid } from '@/db/db';
+import { db, removeRecord, uid } from '@/db/db';
 import type { Food, MealEntry, MealSlot, NutritionTarget } from '@/db/types';
 import { Page } from '@/components/Layout';
 import { Card, EmptyState, Field, NumberInput, ProgressBar, Segmented, Sheet, useToast } from '@/components/ui';
@@ -409,7 +409,7 @@ function MealEntrySheet({
           <button
             className="btn danger"
             onClick={async () => {
-              await db.meals.delete(entry.id);
+              await removeRecord('meals', entry.id);
               toast.show('Entry removed');
               onClose();
             }}

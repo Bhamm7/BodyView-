@@ -21,3 +21,9 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+      - name: App smoke test
+        run: npm run smoke
+      - name: Two-device sync test
+        run: npm run smoke:sync

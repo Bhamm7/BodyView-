@@ -1,10 +1,27 @@
-import { db, DEFAULT_SETTINGS, getSettings, saveSettings, uid } from './db';
+import { db, DEFAULT_SETTINGS, getSettings, saveSettings } from './db';
 import type { Compound, Exercise, Food, NutritionTarget } from './types';
 
 /**
  * First-run catalogues. These are reference lists only — no doses are
  * suggested for compounds; the user enters whatever their own protocol is.
  */
+
+/**
+ * Seeded rows get an id derived from their name rather than a random one, so
+ * every device generates the *same* id for "BPC-157". Two devices that each
+ * seeded themselves before being connected then merge into one catalogue
+ * instead of two rival copies of it.
+ *
+ * User-created records keep random ids; only these built-in lists are derived.
+ */
+function seedId(kind: string, name: string): string {
+  const slug = name
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `seed-${kind}-${slug}`;
+}
 
 const COMPOUND_SEED: Array<Omit<Compound, 'id'>> = [
   // Peptides
@@ -188,17 +205,24 @@ export async function seedIfEmpty(): Promise<void> {
     'rw',
     [db.compounds, db.exercises, db.foods, db.targets],
     async () => {
+      // `bulkPut`, not `bulkAdd`: with derived ids a row that arrived from the
+      // server is simply overwritten with identical content rather than
+      // colliding.
       if ((await db.compounds.count()) === 0) {
-        await db.compounds.bulkAdd(COMPOUND_SEED.map((c) => ({ ...c, id: uid() })));
+        await db.compounds.bulkPut(
+          COMPOUND_SEED.map((c) => ({ ...c, id: seedId('compound', c.name) })),
+        );
       }
       if ((await db.exercises.count()) === 0) {
-        await db.exercises.bulkAdd(EXERCISE_SEED.map((e) => ({ ...e, id: uid() })));
+        await db.exercises.bulkPut(
+          EXERCISE_SEED.map((e) => ({ ...e, id: seedId('exercise', e.name) })),
+        );
       }
       if ((await db.foods.count()) === 0) {
-        await db.foods.bulkAdd(FOOD_SEED.map((f) => ({ ...f, id: uid() })));
+        await db.foods.bulkPut(FOOD_SEED.map((f) => ({ ...f, id: seedId('food', f.name) })));
       }
       if ((await db.targets.count()) === 0) {
-        await db.targets.add({ ...DEFAULT_TARGET, id: uid() });
+        await db.targets.put({ ...DEFAULT_TARGET, id: seedId('target', DEFAULT_TARGET.name) });
       }
     },
   );

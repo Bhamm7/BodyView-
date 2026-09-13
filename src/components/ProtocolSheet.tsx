@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { db, uid } from '@/db/db';
+import { db, removeRecord, uid } from '@/db/db';
 import type { DoseUnit, Protocol, Schedule, ScheduleKind } from '@/db/types';
 import { DOSE_UNITS } from '@/lib/units';
 import { shiftDate, today } from '@/lib/date';
@@ -107,7 +107,7 @@ export function ProtocolSheet({
 
   const remove = async () => {
     if (!protocol) return;
-    await db.protocols.delete(protocol.id);
+    await removeRecord('protocols', protocol.id);
     toast.show('Protocol deleted');
     onClose();
   };

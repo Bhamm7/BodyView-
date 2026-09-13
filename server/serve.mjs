@@ -5,10 +5,17 @@
  * Deliberately dependency-free: this runs as a long-lived service, and a
  * server with no supply chain is one less thing to maintain or patch.
  *
+ * Also hosts the sync API at /api/* backed by SQLite, so every device shares
+ * one database. See server/db.mjs.
+ *
  * Environment:
- *   PORT       port to listen on            (default 8787)
- *   HOST       address to bind              (default 127.0.0.1)
- *   ROOT       directory to serve           (default ../dist)
+ *   PORT            port to listen on                    (default 8787)
+ *   HOST            address to bind                      (default 127.0.0.1)
+ *   ROOT            directory to serve                   (default ../dist)
+ *   BODYVIEW_DB     SQLite file                          (default ../data/bodyview.db)
+ *   BODYVIEW_TOKEN  require this bearer token on /api/*  (default: none)
+ *   BODYVIEW_ALLOW_ORIGIN
+ *                   allow this origin to call /api/*     (default: same-origin only)
  *
  * Binding to localhost by default is intentional: put a TLS terminator in
  * front (see docs/SELF-HOSTING.md). Set HOST=0.0.0.0 to expose it on the LAN
@@ -20,11 +27,25 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createClock, openDatabase } from './db.mjs';
+import { createApi } from './api.mjs';
 
 const HERE = fileURLToPath(new URL('.', import.meta.url));
 const ROOT = resolve(process.env.ROOT ?? join(HERE, '..', 'dist'));
 const PORT = Number(process.env.PORT ?? 8787);
 const HOST = process.env.HOST ?? '127.0.0.1';
+const DB_FILE = resolve(process.env.BODYVIEW_DB ?? join(HERE, '..', 'data', 'bodyview.db'));
+const TOKEN = process.env.BODYVIEW_TOKEN ?? '';
+/**
+ * CORS stays off unless asked for. In the recommended setup this server hosts
+ * both the app and the API, so they share an origin and need no CORS at all —
+ * and leaving it open would let any site the user visits reach this API over
+ * their private network.
+ */
+const ALLOW_ORIGIN = process.env.BODYVIEW_ALLOW_ORIGIN ?? '';
+
+const db = openDatabase(DB_FILE);
+const handleApi = createApi({ db, clock: createClock(db), token: TOKEN });
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -82,16 +103,25 @@ async function findFile(pathname) {
 }
 
 const server = createServer(async (req, res) => {
+  if (ALLOW_ORIGIN) {
+    res.setHeader('Access-Control-Allow-Origin', ALLOW_ORIGIN);
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Vary', 'Origin');
+  }
+
   const send = (status, body, headers = {}) => {
     res.writeHead(status, { 'Content-Type': MIME['.txt'], ...headers });
     res.end(body);
   };
 
+  const pathname = (req.url ?? '/').split('?')[0];
+
+  if (await handleApi(req, res, pathname)) return;
+
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     return send(405, 'Method not allowed', { Allow: 'GET, HEAD' });
   }
-
-  const pathname = (req.url ?? '/').split('?')[0];
 
   if (pathname === '/healthz') {
     return send(200, 'ok', { 'Cache-Control': 'no-store' });
@@ -137,9 +167,18 @@ const server = createServer(async (req, res) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`BodyView serving ${ROOT}`);
-  console.log(`  http://${HOST}:${PORT}`);
+  console.log(`  app      http://${HOST}:${PORT}`);
+  console.log(`  sync api http://${HOST}:${PORT}/api/sync`);
+  console.log(`  database ${DB_FILE}`);
+  if (TOKEN) console.log('  auth     bearer token required');
+  if (ALLOW_ORIGIN) console.log(`  cors     ${ALLOW_ORIGIN}`);
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
-  process.on(signal, () => server.close(() => process.exit(0)));
+  process.on(signal, () =>
+    server.close(() => {
+      db.close();
+      process.exit(0);
+    }),
+  );
 }

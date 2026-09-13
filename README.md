@@ -1,10 +1,13 @@
 # BodyView
 
-A local-first health and fitness tracker that installs as a PWA on your phone
-and runs in any browser on your desktop.
+A health and fitness tracker that installs as a PWA on your phone and runs in
+any browser on your desktop.
 
-Everything you enter is stored in the browser's own database on the device you
-enter it on. There is no account, no server, and nothing is uploaded.
+Run it standalone and everything stays in that browser's own database. Point it
+at your own machine — a Mac mini, a NAS, anything always-on — and your devices
+share one **SQLite database** that you host, while each keeps a full local copy
+so the app still works with no signal. There is no account and no third party
+either way.
 
 ## What it does
 
@@ -47,10 +50,12 @@ npm run dev          # http://localhost:5173
 | Script | Purpose |
 | --- | --- |
 | `npm run dev` | Development server with hot reload |
+| `npm run serve` | Runs the server: the built app plus the sync API and SQLite |
 | `npm run build` | Typecheck and produce a production build in `dist/` |
 | `npm run preview` | Serve the production build locally |
 | `npm test` | Unit tests for the scheduling, projection, stats and formatting logic |
 | `npm run smoke` | Drives the built app in a real browser through every core flow |
+| `npm run smoke:sync` | Two browser profiles against a real server: shared data, deletions, offline catch-up |
 | `npm run serve` | Serves a built `dist/` with the dependency-free static server |
 | `npm run icons` | Regenerates the PWA icon set |
 
@@ -78,21 +83,21 @@ To try it on your phone against the dev server on the same Wi-Fi, run
 `npm run dev -- --host` and open the network URL it prints. Note that iOS will
 not offer *Add to Home Screen* as a real install over plain HTTP.
 
-## Moving data between devices
+## Sharing data between devices
 
-Storage is per-device and per-browser, so your phone and your desktop each hold
-their own copy. **Hosting the app centrally does not change this** — the server
-sends the files, the browser keeps the data. There is no sync yet; see
-[docs/SELF-HOSTING.md](docs/SELF-HOSTING.md) for what that would take.
+Run the server somewhere always-on and every device syncs to one SQLite
+database — see [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md). Each device still
+keeps a full local copy, so you can log a workout with no signal and it
+reconciles when you're back. Where the same record is edited in two places, the
+later edit wins; deletions travel as tombstones so nothing reappears.
 
-**Settings → Export backup** writes a single JSON file with everything in it;
-**Import backup** reads it back, either replacing what is there or merging into
-it. That is also the way to get a copy off a device before clearing its browser
-data.
+Connect a device in **Settings → Sync**.
+
+Without a server, storage is per-device: **Settings → Export backup** writes a
+single JSON file, and **Import backup** reads it back, replacing or merging.
 
 On the same screen, *Ask the browser to keep this data* requests persistent
-storage, which stops the browser evicting the database when space runs low.
-Worth doing on your main device.
+storage, which stops the browser evicting the local copy when space runs low.
 
 ### About Apple Health
 
@@ -105,8 +110,11 @@ want that later; the importer already accepts the full data shape.
 
 - **React 19 + TypeScript**, built by **Vite**, routed with hash-based routing so
   it deep-links from any static host with no server rewrites
-- **Dexie** over IndexedDB for storage, with `dexie-react-hooks` so every screen
-  updates live as data changes
+- **Dexie** over IndexedDB for the on-device copy, with `dexie-react-hooks` so
+  every screen updates live as data changes
+- **SQLite** on the server via Node's built-in `node:sqlite`, so the server has
+  no dependencies at all — one table per collection plus views that flatten the
+  JSON into columns for querying by hand
 - **Recharts** for charts, loaded only on the routes that use one — the entry
   bundle stays around 140 KB gzipped and the charting library arrives on demand
 - **No CSS framework.** A small design-token system in `src/styles/global.css`,
@@ -114,7 +122,7 @@ want that later; the importer already accepts the full data shape.
   sidebar on desktop
 
 ```
-server/     Dependency-free static server for self-hosting
+server/     Static server, sync API and SQLite storage (no dependencies)
 src/
   db/         Dexie schema, domain types, metric catalogue, seed data
   lib/        Scheduling, stock projection, stats, training and nutrition maths
@@ -125,7 +133,8 @@ src/
 
 The business logic lives in `src/lib/` as pure functions, separate from the UI,
 which is what makes it testable — `npm test` covers dose scheduling, adherence,
-stock burn-down, unit conversion, trend maths and number formatting.
+stock burn-down, unit conversion, trend maths, number formatting, and the
+server's merge and cursor rules.
 
 ### Chart conventions
 

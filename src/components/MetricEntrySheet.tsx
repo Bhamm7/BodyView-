@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { db, uid } from '@/db/db';
+import { db, removeRecord, uid } from '@/db/db';
 import { metricDef } from '@/db/metrics';
 import type { MetricEntry, MetricKey } from '@/db/types';
 import { combineDateTime, formatTime, nowTime, today } from '@/lib/date';
@@ -82,7 +82,7 @@ export function MetricEntrySheet({
 
   const remove = async () => {
     if (!entry) return;
-    await db.metrics.delete(entry.id);
+    await removeRecord('metrics', entry.id);
     toast.show(`${def.label} deleted`);
     onClose();
   };

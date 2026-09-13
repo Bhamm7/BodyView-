@@ -1,4 +1,4 @@
-import { db, getSettings } from '@/db/db';
+import { dataTables, db, getSettings } from '@/db/db';
 import { nowISO, today } from './date';
 
 const FORMAT = 'bodyview-backup';
@@ -15,7 +15,8 @@ export interface Backup {
 export async function exportBackup(): Promise<Backup> {
   const tables: Record<string, unknown[]> = {};
   await db.transaction('r', db.tables, async () => {
-    for (const table of db.tables) {
+    // Only the data tables — sync config is local to this device.
+    for (const table of dataTables()) {
       tables[table.name] = await table.toArray();
     }
   });
@@ -55,7 +56,7 @@ export async function importBackup(
 
   const imported: Record<string, number> = {};
   const skipped: string[] = [];
-  const known = new Map(db.tables.map((t) => [t.name, t]));
+  const known = new Map(dataTables().map((t) => [t.name, t]));
 
   await db.transaction('rw', db.tables, async () => {
     for (const [name, rows] of Object.entries(raw.tables)) {
@@ -83,7 +84,7 @@ function isBackup(value: unknown): value is Backup {
 
 /** CSV of one table, for spreadsheet users. */
 export async function exportCsv(tableName: string): Promise<string> {
-  const table = db.tables.find((t) => t.name === tableName);
+  const table = dataTables().find((t) => t.name === tableName);
   if (!table) throw new Error(`Unknown table: ${tableName}`);
   const rows = await table.toArray();
   if (rows.length === 0) return '';

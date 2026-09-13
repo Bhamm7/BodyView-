@@ -35,10 +35,9 @@ const check = (name, condition, detail = '') => {
   }
 };
 
-/** The pre-installed Chromium, falling back to whatever Playwright resolves. */
+/** Prefer a pre-installed Chromium; otherwise let Playwright resolve its own. */
 function chromePath() {
-  const candidates = globSync('/opt/pw-browsers/chromium-*/chrome-linux/chrome');
-  return candidates[0] ?? undefined;
+  return globSync('/opt/pw-browsers/chromium-*/chrome-linux/chrome')[0] ?? undefined;
 }
 
 async function waitForServer() {

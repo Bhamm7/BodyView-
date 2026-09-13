@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { db, uid } from '@/db/db';
+import { db, removeRecord, uid } from '@/db/db';
 import type { DoseUnit, InventoryForm, InventoryItem } from '@/db/types';
 import { Page } from '@/components/Layout';
 import { Card, EmptyState, Field, NumberInput, ProgressBar, Segmented, Sheet, StatTile, useToast } from '@/components/ui';
@@ -294,7 +294,7 @@ function InventorySheet({
 
   const remove = async () => {
     if (!item) return;
-    await db.inventory.delete(item.id);
+    await removeRecord('inventory', item.id);
     toast.show('Item removed');
     onClose();
   };
