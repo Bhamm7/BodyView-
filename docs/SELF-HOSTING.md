@@ -41,6 +41,11 @@ everywhere rather than having it reappear at the next sync.
 
 ## 1. Clone and install the service
 
+You need **Node 22.5 or newer** — the server stores data with Node's built-in
+SQLite, which older versions don't have. `brew install node` gives you a current
+one; the install script checks before doing anything and tells you if yours is
+too old.
+
 On the Mac mini:
 
 ```bash

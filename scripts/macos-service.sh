@@ -39,6 +39,14 @@ node_bin() {
   local bin
   bin="$(command -v node || true)"
   [ -n "$bin" ] || die "node not found on PATH — install it (brew install node) and retry"
+
+  # The server stores data with Node's built-in SQLite. Testing that it loads
+  # is exact, where a version-number comparison would be guesswork — and
+  # without it an old Node installs cleanly, then crash-loops under launchd
+  # with nothing but a silent restart every 10 seconds to show for it.
+  if ! "$bin" -e 'require("node:sqlite")' >/dev/null 2>&1; then
+    die "this node ($("$bin" --version)) has no usable node:sqlite — upgrade with 'brew upgrade node' (Node 22.5 or newer) and retry"
+  fi
   # launchd starts with a minimal PATH, so the absolute path is baked into the
   # plist. Under nvm that path contains the version number and will break on
   # the next upgrade; warn rather than silently install something brittle.
