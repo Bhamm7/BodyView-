@@ -1020,3 +1020,32 @@ table.data td.num, table.data th.num { text-align: right; }
   align-items: center;
   gap: 5px;
 }
+
+/* Required-field marker and the note explaining a disabled Save. */
+.field > label .req {
+  color: var(--critical);
+  margin-left: 3px;
+  font-weight: 700;
+}
+
+.missing-note {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--warning) 14%, transparent);
+  color: var(--warning);
+  font-weight: 600;
+}
+
+/* Weekday picker: seven equal columns, so Saturday does not wrap alone. */
+.weekday-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.weekday-grid .chip {
+  justify-content: center;
+  padding: 0 2px;
+  font-size: 0.75rem;
+}

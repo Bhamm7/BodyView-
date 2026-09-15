@@ -13,7 +13,8 @@
     "icons": "node scripts/generate-icons.mjs",
     "smoke": "node scripts/smoke.mjs",
     "serve": "node server/serve.mjs",
-    "smoke:sync": "node scripts/sync-smoke.mjs"
+    "smoke:sync": "node scripts/sync-smoke.mjs",
+    "smoke:forms": "node scripts/forms-smoke.mjs"
   },
   "dependencies": {
     "date-fns": "^4.1.0",

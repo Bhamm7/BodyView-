@@ -366,4 +366,6 @@ export interface Settings {
   /** Metrics pinned to the dashboard, in display order. */
   dashboardMetrics: MetricKey[];
   seededAt?: ISODateTime;
+  /** Version of the built-in catalogues this device has taken in. */
+  catalogueVersion?: number;
 }

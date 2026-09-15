@@ -3,10 +3,18 @@ import { db, removeRecord, uid } from '@/db/db';
 import type { DoseUnit, Protocol, Schedule, ScheduleKind } from '@/db/types';
 import { DOSE_UNITS } from '@/lib/units';
 import { shiftDate, today } from '@/lib/date';
-import { dailyAverageDose, scheduleLabel, WEEKDAY_LABELS } from '@/lib/schedule';
+import {
+  administrationsPerWeek,
+  dailyFromPerDose,
+  perDoseFromDaily,
+  perDoseFromWeekly,
+  scheduleLabel,
+  WEEKDAY_LABELS,
+  weeklyFromPerDose,
+} from '@/lib/schedule';
 import { num } from '@/lib/format';
 import { useCompounds } from '@/hooks/useData';
-import { Field, NumberInput, Segmented, Sheet, Stepper, useToast } from './ui';
+import { Field, MissingFields, NumberInput, Segmented, Sheet, Stepper, useToast } from './ui';
 
 const KINDS = [
   { value: 'everyNDays', label: 'Interval' },
@@ -15,6 +23,22 @@ const KINDS = [
 ] as const;
 
 const LENGTH_PRESETS = [4, 6, 8, 10, 12, 16];
+
+/**
+ * Which way round the user enters the amount.
+ *
+ * Injectables are almost always discussed as a weekly total ("500 a week"),
+ * orals and peptides per administration, and stock projections think in daily
+ * averages. The protocol stores one canonical number — the amount per
+ * administration — and this only changes which of the three the user types.
+ */
+const BASES = [
+  { value: 'perDose', label: 'Per dose' },
+  { value: 'perWeek', label: 'Per week' },
+  { value: 'perDay', label: 'Per day' },
+] as const;
+
+type Basis = (typeof BASES)[number]['value'];
 
 /** Creates or edits a dosing protocol — the schedule that drives a cycle. */
 export function ProtocolSheet({
@@ -43,6 +67,7 @@ export function ProtocolSheet({
   const [startDate, setStartDate] = useState(today());
   const [endDate, setEndDate] = useState('');
   const [notes, setNotes] = useState('');
+  const [basis, setBasis] = useState<Basis>('perDose');
 
   useEffect(() => {
     if (!open) return;
@@ -83,8 +108,38 @@ export function ProtocolSheet({
     [kind, intervalDays, days, daysOn, daysOff, timesPerDay],
   );
 
-  const perDay = dose != null ? dailyAverageDose({ dose, schedule } as Protocol) : 0;
-  const valid = !!compoundId && dose != null && dose > 0 && (kind !== 'weekdays' || days.length > 0);
+  const perWeekCount = administrationsPerWeek(schedule);
+  const unitText = unit === 'iu' ? 'IU' : unit;
+
+  // The field holds whichever basis is selected; `dose` stays per-administration.
+  const shown =
+    dose == null
+      ? null
+      : basis === 'perWeek'
+        ? weeklyFromPerDose(dose, schedule)
+        : basis === 'perDay'
+          ? dailyFromPerDose(dose, schedule)
+          : dose;
+
+  const setShown = (value: number | null) => {
+    if (value == null) {
+      setDose(null);
+      return;
+    }
+    const converted =
+      basis === 'perWeek'
+        ? perDoseFromWeekly(value, schedule)
+        : basis === 'perDay'
+          ? perDoseFromDaily(value, schedule)
+          : value;
+    setDose(converted);
+  };
+
+  const missing: string[] = [];
+  if (!compoundId) missing.push('compound');
+  if (dose == null || dose <= 0) missing.push('dose');
+  if (kind === 'weekdays' && days.length === 0) missing.push('at least one weekday');
+  const valid = missing.length === 0;
 
   const save = async () => {
     if (!valid) return;
@@ -137,7 +192,7 @@ export function ProtocolSheet({
         </>
       }
     >
-      <Field label="Compound">
+      <Field label="Compound" required>
         <select className="select" value={compoundId} onChange={(e) => pickCompound(e.target.value)}>
           {compounds.length === 0 && <option value="">Add a compound first</option>}
           {compounds.map((c) => (
@@ -148,11 +203,18 @@ export function ProtocolSheet({
         </select>
       </Field>
 
+      <Field label="Amount is">
+        <Segmented value={basis} options={BASES} onChange={setBasis} block label="Dose basis" />
+      </Field>
+
       <div className="grid grid-2">
-        <Field label="Dose">
-          <NumberInput value={dose} onChange={setDose} step={0.5} min={0} big />
+        <Field
+          label={basis === 'perWeek' ? 'Weekly total' : basis === 'perDay' ? 'Daily average' : 'Each dose'}
+          required
+        >
+          <NumberInput value={shown} onChange={setShown} step={0.5} min={0} big />
         </Field>
-        <Field label="Unit">
+        <Field label="Unit" required>
           <select className="select" value={unit} onChange={(e) => setUnit(e.target.value as DoseUnit)}>
             {DOSE_UNITS.map((u) => (
               <option key={u} value={u}>
@@ -181,8 +243,8 @@ export function ProtocolSheet({
       )}
 
       {kind === 'weekdays' && (
-        <Field label="Days of the week">
-          <div className="row tight wrap">
+        <Field label="Days of the week" required>
+          <div className="weekday-grid">
             {WEEKDAY_LABELS.map((label, i) => (
               <button
                 key={label}
@@ -262,18 +324,55 @@ export function ProtocolSheet({
       </Field>
 
       <div className="card" style={{ background: 'var(--surface-2)' }}>
-        <div className="card-title">Summary</div>
-        <div className="small">
-          {scheduleLabel(schedule)} · averages{' '}
-          <strong className="mono">
-            {num(perDay, 2)} {unit === 'iu' ? 'IU' : unit}
-          </strong>{' '}
-          per day
-        </div>
-        <div className="tiny dim" style={{ marginTop: 4 }}>
-          Used to project when your stock runs out.
+        <div className="card-title">This works out as</div>
+        {dose == null || perWeekCount <= 0 ? (
+          <div className="small dim">
+            {perWeekCount <= 0
+              ? 'Pick at least one day before this can be worked out.'
+              : 'Enter an amount to see the breakdown.'}
+          </div>
+        ) : (
+          <table className="data" style={{ marginTop: 2 }}>
+            <tbody>
+              <tr>
+                <td className="dim">Each dose</td>
+                <td className="num">
+                  <strong className="mono">
+                    {num(dose, 3)} {unitText}
+                  </strong>
+                </td>
+              </tr>
+              <tr>
+                <td className="dim">Per week</td>
+                <td className="num">
+                  <strong className="mono">
+                    {num(weeklyFromPerDose(dose, schedule), 2)} {unitText}
+                  </strong>
+                </td>
+              </tr>
+              <tr>
+                <td className="dim">Per day (average)</td>
+                <td className="num">
+                  <strong className="mono">
+                    {num(dailyFromPerDose(dose, schedule), 3)} {unitText}
+                  </strong>
+                </td>
+              </tr>
+              <tr>
+                <td className="dim">Doses a week</td>
+                <td className="num">
+                  <strong className="mono">{num(perWeekCount, 2)}</strong>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        )}
+        <div className="tiny dim" style={{ marginTop: 'var(--sp-2)' }}>
+          {scheduleLabel(schedule)}. The daily average drives your stock run-out date.
         </div>
       </div>
+
+      <MissingFields missing={missing} />
 
       <Field label="Notes">
         <textarea

@@ -100,18 +100,44 @@ export function Segmented<T extends string>({
 export function Field({
   label,
   hint,
+  required,
   children,
 }: {
   label: string;
   hint?: ReactNode;
+  /** Marks the field as needed before the form can be saved. */
+  required?: boolean;
   children: ReactNode;
 }) {
   return (
     <div className="field">
-      <label>{label}</label>
+      <label>
+        {label}
+        {required && (
+          <span className="req" aria-hidden="true">
+            *
+          </span>
+        )}
+        {required && <span className="sr-only"> (required)</span>}
+      </label>
       {children}
       {hint && <span className="tiny dim">{hint}</span>}
     </div>
+  );
+}
+
+/**
+ * Explains why a form cannot be saved yet.
+ *
+ * A disabled Save button with no explanation is a dead end — the user can see
+ * that something is wrong but not what, so name the fields that are missing.
+ */
+export function MissingFields({ missing }: { missing: string[] }) {
+  if (missing.length === 0) return null;
+  return (
+    <p className="tiny missing-note" role="status">
+      Still needed: {missing.join(', ')}
+    </p>
   );
 }
 

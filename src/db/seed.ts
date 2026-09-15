@@ -34,20 +34,66 @@ const COMPOUND_SEED: Array<Omit<Compound, 'id'>> = [
   { name: 'Tirzepatide', category: 'peptide', defaultUnit: 'mg', route: 'subcutaneous', color: '#fb7185' },
   { name: 'GHK-Cu', category: 'peptide', defaultUnit: 'mg', route: 'subcutaneous', color: '#2dd4bf' },
 
+  { name: 'Retatrutide', category: 'peptide', defaultUnit: 'mg', route: 'subcutaneous', color: '#fb7185' },
+  { name: 'Survodutide', category: 'peptide', defaultUnit: 'mg', route: 'subcutaneous', color: '#f9a8d4' },
+  { name: 'Cagrilintide', category: 'peptide', defaultUnit: 'mg', route: 'subcutaneous', color: '#e879f9' },
+  { name: 'AOD-9604', category: 'peptide', defaultUnit: 'mcg', route: 'subcutaneous', color: '#67e8f9' },
+  { name: 'Hexarelin', category: 'peptide', defaultUnit: 'mcg', route: 'subcutaneous', color: '#7dd3fc' },
+  { name: 'Sermorelin', category: 'peptide', defaultUnit: 'mcg', route: 'subcutaneous', color: '#93c5fd' },
+  { name: 'MOTS-c', category: 'peptide', defaultUnit: 'mg', route: 'subcutaneous', color: '#5eead4' },
+  { name: 'Epitalon', category: 'peptide', defaultUnit: 'mg', route: 'subcutaneous', color: '#34d399' },
+  { name: 'Thymosin Alpha-1', category: 'peptide', defaultUnit: 'mg', route: 'subcutaneous', color: '#6ee7b7' },
+  { name: 'PT-141 (Bremelanotide)', category: 'peptide', defaultUnit: 'mg', route: 'subcutaneous', color: '#c4b5fd' },
+  { name: 'Melanotan II', category: 'peptide', defaultUnit: 'mcg', route: 'subcutaneous', color: '#a5b4fc' },
+  { name: 'HGH (Somatropin)', category: 'peptide', defaultUnit: 'iu', route: 'subcutaneous', color: '#818cf8' },
+
   // Performance compounds
   { name: 'Testosterone Enanthate', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#f97316' },
   { name: 'Testosterone Cypionate', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#fb923c' },
   { name: 'Testosterone Propionate', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#fdba74' },
+  { name: 'Testosterone Undecanoate', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#fed7aa' },
+  { name: 'Sustanon 250', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#f59e0b' },
+  { name: 'Primobolan (Methenolone Enanthate)', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#d97706' },
+  { name: 'Primobolan Acetate (oral)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#b45309' },
   { name: 'Nandrolone Decanoate', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#facc15' },
+  { name: 'Nandrolone Phenylpropionate', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#fde047' },
   { name: 'Boldenone Undecylenate', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#eab308' },
-  { name: 'Masteron', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#a3e635' },
+  { name: 'Masteron (Drostanolone Propionate)', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#a3e635' },
+  { name: 'Masteron Enanthate', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#bef264' },
+  { name: 'Trenbolone Acetate', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#ef4444' },
+  { name: 'Trenbolone Enanthate', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#f87171' },
   { name: 'Anavar (Oxandrolone)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#84cc16' },
+  { name: 'Winstrol (Stanozolol)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#65a30d' },
+  { name: 'Turinabol', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#4d7c0f' },
+  { name: 'Dianabol (Methandienone)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#22c55e' },
+  { name: 'Anadrol (Oxymetholone)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#16a34a' },
+  { name: 'Superdrol (Methasterone)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#15803d' },
   { name: 'HCG', category: 'ped', defaultUnit: 'iu', route: 'subcutaneous', color: '#4ade80' },
+
+  // SARMs and other research compounds
+  { name: 'Ostarine (MK-2866)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#2dd4bf' },
+  { name: 'Ligandrol (LGD-4033)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#14b8a6' },
+  { name: 'RAD-140 (Testolone)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#0d9488' },
+  { name: 'Cardarine (GW-501516)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#0891b2' },
+  { name: 'MK-677 (Ibutamoren)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#06b6d4' },
+  { name: 'S-23', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#22d3ee' },
+  { name: 'YK-11', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#a5f3fc' },
 
   // Ancillaries
   { name: 'Anastrozole', category: 'ancillary', defaultUnit: 'mg', route: 'oral', color: '#94a3b8' },
+  { name: 'Exemestane', category: 'ancillary', defaultUnit: 'mg', route: 'oral', color: '#9ca3af' },
+  { name: 'Letrozole', category: 'ancillary', defaultUnit: 'mg', route: 'oral', color: '#d4d4d8' },
   { name: 'Tamoxifen', category: 'ancillary', defaultUnit: 'mg', route: 'oral', color: '#a1a1aa' },
+  { name: 'Clomiphene (Clomid)', category: 'ancillary', defaultUnit: 'mg', route: 'oral', color: '#e4e4e7' },
+  { name: 'Enclomiphene', category: 'ancillary', defaultUnit: 'mg', route: 'oral', color: '#f4f4f5' },
+  { name: 'Cabergoline', category: 'ancillary', defaultUnit: 'mg', route: 'oral', color: '#8b5cf6' },
+  { name: 'Finasteride', category: 'ancillary', defaultUnit: 'mg', route: 'oral', color: '#c084fc' },
+  { name: 'Dutasteride', category: 'ancillary', defaultUnit: 'mg', route: 'oral', color: '#d8b4fe' },
   { name: 'Telmisartan', category: 'ancillary', defaultUnit: 'mg', route: 'oral', color: '#cbd5e1' },
+  { name: 'Metformin', category: 'medication', defaultUnit: 'mg', route: 'oral', color: '#60a5fa' },
+  { name: 'Levothyroxine (T4)', category: 'medication', defaultUnit: 'mcg', route: 'oral', color: '#38bdf8' },
+  { name: 'Liothyronine (T3)', category: 'medication', defaultUnit: 'mcg', route: 'oral', color: '#0ea5e9' },
+  { name: 'Tadalafil', category: 'medication', defaultUnit: 'mg', route: 'oral', color: '#fbbf24' },
 
   // Vitamins & supplements
   { name: 'Vitamin D3', category: 'vitamin', defaultDose: 5000, defaultUnit: 'iu', route: 'oral', color: '#fcd34d' },
@@ -61,6 +107,20 @@ const COMPOUND_SEED: Array<Omit<Compound, 'id'>> = [
   { name: 'Ashwagandha', category: 'supplement', defaultDose: 600, defaultUnit: 'mg', route: 'oral', color: '#a3a3a3' },
   { name: 'L-Citrulline', category: 'supplement', defaultDose: 6, defaultUnit: 'g', route: 'oral', color: '#5eead4' },
   { name: 'Caffeine', category: 'supplement', defaultDose: 200, defaultUnit: 'mg', route: 'oral', color: '#d6a67c' },
+  { name: 'Vitamin B6', category: 'vitamin', defaultDose: 25, defaultUnit: 'mg', route: 'oral', color: '#f9a8d4' },
+  { name: 'Folate', category: 'vitamin', defaultDose: 400, defaultUnit: 'mcg', route: 'oral', color: '#86efac' },
+  { name: 'Iron', category: 'vitamin', defaultDose: 18, defaultUnit: 'mg', route: 'oral', color: '#b91c1c' },
+  { name: 'Iodine', category: 'vitamin', defaultDose: 150, defaultUnit: 'mcg', route: 'oral', color: '#7c3aed' },
+  { name: 'Selenium', category: 'vitamin', defaultDose: 200, defaultUnit: 'mcg', route: 'oral', color: '#a8a29e' },
+  { name: 'CoQ10', category: 'supplement', defaultDose: 200, defaultUnit: 'mg', route: 'oral', color: '#fcd34d' },
+  { name: 'Berberine', category: 'supplement', defaultDose: 500, defaultUnit: 'mg', route: 'oral', color: '#ca8a04' },
+  { name: 'NAC', category: 'supplement', defaultDose: 600, defaultUnit: 'mg', route: 'oral', color: '#94a3b8' },
+  { name: 'TUDCA', category: 'supplement', defaultDose: 500, defaultUnit: 'mg', route: 'oral', color: '#84cc16' },
+  { name: 'Beta-Alanine', category: 'supplement', defaultDose: 3.2, defaultUnit: 'g', route: 'oral', color: '#f472b6' },
+  { name: 'Taurine', category: 'supplement', defaultDose: 2, defaultUnit: 'g', route: 'oral', color: '#22d3ee' },
+  { name: 'Glycine', category: 'supplement', defaultDose: 3, defaultUnit: 'g', route: 'oral', color: '#e2e8f0' },
+  { name: 'Psyllium Husk', category: 'supplement', defaultDose: 5, defaultUnit: 'g', route: 'oral', color: '#a16207' },
+  { name: 'Electrolytes', category: 'supplement', defaultDose: 1, defaultUnit: 'g', route: 'oral', color: '#38bdf8' },
 ];
 
 const EX = (
@@ -194,6 +254,12 @@ const DEFAULT_TARGET: Omit<NutritionTarget, 'id'> = {
 };
 
 /**
+ * Bumped whenever entries are added to the catalogues above, so existing
+ * installs pick them up. See {@link topUpCatalogue}.
+ */
+export const CATALOGUE_VERSION = 2;
+
+/**
  * Populates the reference catalogues exactly once. Safe to call on every boot:
  * it no-ops as soon as `seededAt` is recorded in settings.
  */
@@ -227,5 +293,47 @@ export async function seedIfEmpty(): Promise<void> {
     },
   );
 
-  await saveSettings({ ...DEFAULT_SETTINGS, ...settings, seededAt: new Date().toISOString() });
+  await saveSettings({
+    ...DEFAULT_SETTINGS,
+    ...settings,
+    seededAt: new Date().toISOString(),
+    catalogueVersion: CATALOGUE_VERSION,
+  });
+}
+
+/**
+ * Adds catalogue entries introduced since this device was first seeded.
+ *
+ * Only genuinely missing ids are written, so an entry the user has edited —
+ * renamed, recoloured, given a different default — is never overwritten. An
+ * entry they deleted does come back once, on the upgrade that adds it; that is
+ * the cost of not keeping a tombstone for every built-in row forever.
+ */
+export async function topUpCatalogue(): Promise<number> {
+  const settings = await getSettings();
+  if (!settings.seededAt) return 0; // a fresh install seeds in full instead
+  if ((settings.catalogueVersion ?? 1) >= CATALOGUE_VERSION) return 0;
+
+  let added = 0;
+
+  await db.transaction('rw', [db.compounds, db.exercises, db.foods], async () => {
+    const addMissing = async <T extends { id: string }>(
+      table: { bulkGet: (keys: string[]) => Promise<Array<T | undefined>>; bulkAdd: (rows: T[]) => Promise<unknown> },
+      rows: T[],
+    ) => {
+      const existing = await table.bulkGet(rows.map((r) => r.id));
+      const fresh = rows.filter((_, i) => existing[i] === undefined);
+      if (fresh.length > 0) {
+        await table.bulkAdd(fresh);
+        added += fresh.length;
+      }
+    };
+
+    await addMissing(db.compounds, COMPOUND_SEED.map((c) => ({ ...c, id: seedId('compound', c.name) })));
+    await addMissing(db.exercises, EXERCISE_SEED.map((e) => ({ ...e, id: seedId('exercise', e.name) })));
+    await addMissing(db.foods, FOOD_SEED.map((f) => ({ ...f, id: seedId('food', f.name) })));
+  });
+
+  await saveSettings({ catalogueVersion: CATALOGUE_VERSION });
+  return added;
 }

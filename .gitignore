@@ -4,6 +4,7 @@ dist-ssr/
 .test-build/
 .smoke/
 .smoke-sync/
+.smoke-forms/
 data/
 *.db
 *.db-wal

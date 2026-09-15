@@ -1,7 +1,16 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { Protocol, Schedule } from '@/db/types';
-import { dailyAverageDose, isScheduledOn, scheduleLabel } from '../schedule';
+import {
+  administrationsPerWeek,
+  dailyAverageDose,
+  dailyFromPerDose,
+  isScheduledOn,
+  perDoseFromDaily,
+  perDoseFromWeekly,
+  scheduleLabel,
+  weeklyFromPerDose,
+} from '../schedule';
 import { dateRange } from '../date';
 
 const protocol = (schedule: Schedule, over: Partial<Protocol> = {}): Protocol => ({
@@ -117,5 +126,53 @@ describe('scheduleLabel', () => {
       scheduleLabel({ kind: 'cycling', daysOn: 5, daysOff: 2, timesPerDay: 1 }),
       '5 on / 2 off',
     );
+  });
+});
+
+describe('dose basis conversion', () => {
+  const daily: Schedule = { kind: 'everyNDays', intervalDays: 1, timesPerDay: 1 };
+  const twiceWeekly: Schedule = { kind: 'weekdays', days: [1, 4], timesPerDay: 1 };
+  const eod: Schedule = { kind: 'everyNDays', intervalDays: 2, timesPerDay: 1 };
+
+  it('counts administrations per week', () => {
+    assert.equal(administrationsPerWeek(daily), 7);
+    assert.equal(administrationsPerWeek(twiceWeekly), 2);
+    assert.equal(administrationsPerWeek(eod), 3.5);
+    assert.equal(administrationsPerWeek({ ...daily, timesPerDay: 3 }), 21);
+    assert.equal(administrationsPerWeek({ kind: 'cycling', daysOn: 5, daysOff: 2, timesPerDay: 1 }), 5);
+  });
+
+  it('splits a weekly total across the week, the way PED doses are quoted', () => {
+    // 500 mg/week on a Mon/Thu split is 250 mg an injection.
+    assert.equal(perDoseFromWeekly(500, twiceWeekly), 250);
+    assert.equal(perDoseFromWeekly(700, daily), 100);
+  });
+
+  it('round-trips between per-dose and weekly', () => {
+    for (const schedule of [daily, twiceWeekly, eod]) {
+      const perDose = perDoseFromWeekly(500, schedule);
+      assert.ok(perDose != null);
+      assert.ok(Math.abs(weeklyFromPerDose(perDose, schedule) - 500) < 1e-9);
+    }
+  });
+
+  it('agrees with the daily average used for stock projection', () => {
+    for (const schedule of [daily, twiceWeekly, eod]) {
+      const protocol = { dose: 100, schedule } as Protocol;
+      assert.ok(Math.abs(dailyFromPerDose(100, schedule) - dailyAverageDose(protocol)) < 1e-9);
+    }
+  });
+
+  it('round-trips between per-dose and daily', () => {
+    const perDose = perDoseFromDaily(50, twiceWeekly);
+    assert.ok(perDose != null);
+    assert.ok(Math.abs(dailyFromPerDose(perDose, twiceWeekly) - 50) < 1e-9);
+  });
+
+  it('has no answer when the schedule never fires', () => {
+    const noDays: Schedule = { kind: 'weekdays', days: [], timesPerDay: 1 };
+    assert.equal(administrationsPerWeek(noDays), 0);
+    assert.equal(perDoseFromWeekly(500, noDays), null);
+    assert.equal(perDoseFromDaily(50, noDays), null);
   });
 });

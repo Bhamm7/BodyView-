@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { db, removeRecord, uid } from '@/db/db';
 import type { DoseUnit, InventoryForm, InventoryItem } from '@/db/types';
 import { Page } from '@/components/Layout';
-import { Card, EmptyState, Field, NumberInput, ProgressBar, Segmented, Sheet, StatTile, useToast } from '@/components/ui';
+import { Card, EmptyState, Field, MissingFields, NumberInput, ProgressBar, Segmented, Sheet, StatTile, useToast } from '@/components/ui';
 import { useCompoundMap, useCompounds, useInventory, useProtocols } from '@/hooks/useData';
 import { project, shortfall, STATUS_LABEL, STATUS_ORDER, type Projection } from '@/lib/inventory';
 import { DOSE_UNITS, humanizeMass } from '@/lib/units';
@@ -243,6 +243,10 @@ function InventorySheet({
   const [form, setForm] = useState<InventoryForm>('vial');
   const [initial, setInitial] = useState<number | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
+  // New stock is almost always full, so mirror the unit size until the user
+  // says otherwise — leaving this blank was the commonest reason Save stayed
+  // disabled with nothing on screen to explain it.
+  const [remainingEdited, setRemainingEdited] = useState(false);
   const [unit, setUnit] = useState<DoseUnit>('mg');
   const [sealed, setSealed] = useState<number | null>(0);
   const [reorderDays, setReorderDays] = useState<number | null>(14);
@@ -258,6 +262,7 @@ function InventorySheet({
     setForm(item?.form ?? 'vial');
     setInitial(item?.initial ?? null);
     setRemaining(item?.remaining ?? null);
+    setRemainingEdited(item != null);
     setUnit(item?.unit ?? compounds.find((c) => c.id === seedId)?.defaultUnit ?? 'mg');
     setSealed(item?.sealedCount ?? 0);
     setReorderDays(item?.reorderDays ?? 14);
@@ -267,7 +272,14 @@ function InventorySheet({
     setNotes(item?.notes ?? '');
   }, [open, item, compounds]);
 
-  const valid = !!compoundId && initial != null && initial > 0 && remaining != null;
+  const unitWord = unitLabel(unit, 2);
+  const countBased = unit === 'capsule' || unit === 'tablet' || unit === 'drop';
+
+  const missing: string[] = [];
+  if (!compoundId) missing.push('compound');
+  if (initial == null || initial <= 0) missing.push(countBased ? 'per container' : 'unit size');
+  if (remaining == null) missing.push('remaining');
+  const valid = missing.length === 0;
 
   const save = async () => {
     if (!valid) return;
@@ -299,9 +311,6 @@ function InventorySheet({
     onClose();
   };
 
-  const unitWord = unitLabel(unit, 2);
-  const countBased = unit === 'capsule' || unit === 'tablet' || unit === 'drop';
-
   return (
     <Sheet
       open={open}
@@ -324,7 +333,7 @@ function InventorySheet({
         </>
       }
     >
-      <Field label="Compound">
+      <Field label="Compound" required>
         <select
           className="select"
           value={compoundId}
@@ -361,8 +370,17 @@ function InventorySheet({
         <Field
           label={countBased ? 'Per container' : 'Unit size'}
           hint={countBased ? 'e.g. 90 capsules in a bottle' : 'e.g. a 10 mg vial'}
+          required
         >
-          <NumberInput value={initial} onChange={setInitial} min={0} step={countBased ? 1 : 0.5} />
+          <NumberInput
+            value={initial}
+            onChange={(value) => {
+              setInitial(value);
+              if (!remainingEdited) setRemaining(value);
+            }}
+            min={0}
+            step={countBased ? 1 : 0.5}
+          />
         </Field>
         <Field label="Unit">
           <select className="select" value={unit} onChange={(e) => setUnit(e.target.value as DoseUnit)}>
@@ -378,14 +396,33 @@ function InventorySheet({
       <Field
         label={`Remaining in the open one (${unitWord})`}
         hint="Counts down automatically as you log doses"
+        required
       >
         <div className="row tight">
-          <NumberInput value={remaining} onChange={setRemaining} min={0} step={countBased ? 1 : 0.5} />
-          <button className="btn sm" type="button" onClick={() => setRemaining(initial)} disabled={initial == null}>
+          <NumberInput
+            value={remaining}
+            onChange={(value) => {
+              setRemainingEdited(true);
+              setRemaining(value);
+            }}
+            min={0}
+            step={countBased ? 1 : 0.5}
+          />
+          <button
+            className="btn sm"
+            type="button"
+            onClick={() => {
+              setRemainingEdited(true);
+              setRemaining(initial);
+            }}
+            disabled={initial == null}
+          >
             Full
           </button>
         </div>
       </Field>
+
+      <MissingFields missing={missing} />
 
       <div className="grid grid-2">
         <Field label="Sealed spares" hint="Unopened, opened automatically">
