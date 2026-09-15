@@ -136,8 +136,40 @@ PLISTEOF
   ok "wrote $PLIST"
 }
 
+job_loaded() {
+  launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1
+}
+
 bootout_quiet() {
   launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+  # bootout returns before launchd has finished unloading the job, and
+  # bootstrapping into that gap fails with "Bootstrap failed: 5: Input/output
+  # error". Wait for the job to actually be gone.
+  local waited=0
+  while job_loaded && [ "$waited" -lt 40 ]; do
+    sleep 0.25
+    waited=$((waited + 1))
+  done
+}
+
+# Reads what the *installed* service is configured with, rather than what this
+# shell's environment would produce. Without this, running `doctor` in a plain
+# terminal reports the defaults and contradicts the service that is running.
+plist_value() {
+  [ -f "$PLIST" ] || return 1
+  plutil -extract "EnvironmentVariables.$1" raw -o - "$PLIST" 2>/dev/null
+}
+
+CONFIG_SOURCE="defaults and environment"
+
+use_installed_config() {
+  local value
+  [ -f "$PLIST" ] || return 0
+  CONFIG_SOURCE="the installed service"
+  value="$(plist_value HOST)" && [ -n "$value" ] && HOST="$value"
+  value="$(plist_value PORT)" && [ -n "$value" ] && PORT="$value"
+  value="$(plist_value BODYVIEW_DB)" && [ -n "$value" ] && DB_FILE="$value"
+  return 0
 }
 
 cmd_install() {
@@ -155,7 +187,23 @@ cmd_install() {
   # it just never starts, reporting "not running / never exited". Enabling
   # afterwards does not retroactively launch it.
   launchctl enable "$DOMAIN/$LABEL" 2>/dev/null || true
-  launchctl bootstrap "$DOMAIN" "$PLIST"
+
+  # Guarded: an unguarded failure here aborts the script under `set -e`, which
+  # leaves the plist written but the job not loaded — an install that looks
+  # like it half-worked with no explanation.
+  local boot_err=""
+  if ! boot_err="$(launchctl bootstrap "$DOMAIN" "$PLIST" 2>&1)"; then
+    # Retry once: the usual cause is the previous job not being fully gone.
+    sleep 2
+    if ! boot_err="$(launchctl bootstrap "$DOMAIN" "$PLIST" 2>&1)"; then
+      printf '\033[31merror:\033[0m could not start the service.\n' >&2
+      printf '       launchctl said: %s\n' "${boot_err:-(nothing)}" >&2
+      printf '       The plist is at %s\n' "$PLIST" >&2
+      printf '       Run: %s doctor\n' "$0" >&2
+      return 1
+    fi
+  fi
+
   # RunAtLoad should have started it; kickstart makes that certain rather than
   # assumed, and is harmless when it is already running.
   launchctl kickstart "$DOMAIN/$LABEL" 2>/dev/null || true
@@ -224,6 +272,7 @@ cmd_update() {
 
 cmd_status() {
   require_macos
+  use_installed_config
   if launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1; then
     launchctl print "$DOMAIN/$LABEL" | grep -E "^\s+(state|pid|last exit)" || true
   else
@@ -244,6 +293,7 @@ cmd_logs() {
 # Everything worth knowing when it is not working, in one output to paste.
 cmd_doctor() {
   require_macos
+  use_installed_config
   printf '\n--- environment\n'
   printf 'macOS      %s\n' "$(sw_vers -productVersion 2>/dev/null || echo unknown)"
   local node_path
@@ -265,16 +315,18 @@ cmd_doctor() {
 
   printf '\n--- launchd\n'
   printf 'plist      %s\n' "$([ -f "$PLIST" ] && echo present || echo MISSING)"
-  if launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1; then
+  if job_loaded; then
     launchctl print "$DOMAIN/$LABEL" \
       | grep -E "^\s+(state|pid|last exit code|program|path) " \
       | awk '{ key = $1 " " $2; if (!(key in seen)) { seen[key] = 1; print "          " $0 } }' \
       || true
   else
-    printf '           job not loaded\n'
+    printf '           job NOT LOADED — the install did not finish.\n'
+    printf '           Re-run: %s install\n' "$0"
   fi
 
   printf '\n--- service\n'
+  printf 'config     from %s\n' "$CONFIG_SOURCE"
   printf 'port       %s on %s\n' "$PORT" "$HOST"
   if curl -sf "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
     printf 'health     responding\n'
