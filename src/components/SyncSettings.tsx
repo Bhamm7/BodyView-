@@ -23,7 +23,9 @@ export function SyncSettings() {
 
   useEffect(() => {
     if (!state) return;
-    setUrl(state.serverUrl);
+    // The server that holds the database is nearly always the one that served
+    // this page, so offer that rather than making the user type an address.
+    setUrl(state.serverUrl || window.location.origin);
     setToken(state.token ?? '');
   }, [state?.serverUrl, state?.token]); // eslint-disable-line react-hooks/exhaustive-deps
 

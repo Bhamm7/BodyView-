@@ -47,11 +47,31 @@ export async function setSyncState(patch: Partial<SyncState>): Promise<SyncState
   return next;
 }
 
+/**
+ * The scheme to assume when a pasted address has none.
+ *
+ * Matching the page's own scheme is what makes a bare hostname work in both
+ * setups: served over HTTPS through a tunnel, a bare host means HTTPS; served
+ * over plain HTTP on a home network, assuming HTTPS would simply fail to
+ * connect.
+ */
+function defaultScheme(): 'http' | 'https' {
+  if (typeof window !== 'undefined' && window.location?.protocol === 'http:') return 'http';
+  return 'https';
+}
+
 /** Trims a pasted URL into a usable origin, tolerating a missing scheme. */
-export function normalizeServerUrl(input: string): string {
-  const trimmed = input.trim().replace(/\/+$/, '');
-  if (!trimmed) return '';
-  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+export function normalizeServerUrl(input: string, scheme: 'http' | 'https' = defaultScheme()): string {
+  const raw = input.trim();
+  if (!raw) return '';
+
+  // A scheme with nothing after it would otherwise parse into a URL with the
+  // scheme itself as the hostname ("http://" -> "http://http"). Checked before
+  // trailing slashes are stripped, which would leave just "http:".
+  if (/^https?:\/*$/i.test(raw)) return '';
+
+  const trimmed = raw.replace(/\/+$/, '');
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `${scheme}://${trimmed}`;
   try {
     const url = new URL(withScheme);
     return `${url.protocol}//${url.host}${url.pathname === '/' ? '' : url.pathname}`;

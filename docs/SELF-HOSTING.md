@@ -207,16 +207,56 @@ You can (`mkcert`), but you must install and explicitly trust the local CA on
 every device — on iOS that's two separate settings screens, and it silently
 breaks when you get a new phone. Tailscale is less work and less fragile.
 
-## 3. Install it on your phone, and connect it
+## 3. Install it on your other devices, and connect them
 
-Once you have the HTTPS URL:
+Everything other than the mini is a client. There is nothing to install on a
+Windows PC, a laptop or a phone beyond opening the address and connecting —
+the database stays on the mini.
+
+Once you have the URL:
 
 - **iOS** — open it in **Safari** (not Chrome), then Share → *Add to Home Screen*
 - **Android** — open in Chrome, then menu → *Install app*
+- **Windows / desktop** — open it in Chrome or Edge; if the address is HTTPS
+  there is an install icon in the address bar, which gives it its own window
+  and taskbar entry. Over plain HTTP it stays an ordinary tab, which works
+  fine, just without offline support.
 
 Then on each device: **Settings → Sync**, paste the same URL, and tap
 *Connect*. That is what joins it to the shared database — installing the app
 alone does not.
+
+### Reaching the mini from another computer on your network
+
+By default the server listens only on the mini itself, so nothing else can
+reach it. To open it to your own network:
+
+```bash
+BODYVIEW_HOST=0.0.0.0 ./scripts/macos-service.sh install
+```
+
+Then from the other machine use the mini's own hostname, which survives your
+router handing out a different IP:
+
+```
+http://<your-mac's-name>.local:8787
+```
+
+Windows 10 and 11 resolve `.local` names natively. If it does not resolve, use
+the address instead — on the mini, `ipconfig getifaddr en0` (or `en1` if that
+is empty) prints it.
+
+Two things to know:
+
+- macOS may pop up a firewall prompt the first time something connects from
+  another machine. Allow it.
+- This puts the sync API on your local network with no authentication. Set a
+  token (below) if anyone else uses that network.
+
+This route has no HTTPS, so browsers will not install it as an app or run it
+offline. On a desktop that matters much less than on a phone. If you want it
+everywhere and properly installable, use Tailscale instead — the same URL then
+works from your desk, the gym, or anywhere else.
 
 ### A device that was used before being connected
 
