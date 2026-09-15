@@ -90,12 +90,42 @@ So terminate TLS in front of the server. Two good ways.
 
 ### Tailscale (recommended)
 
-Install Tailscale on the Mac mini and on your phone, sign both into the same
-tailnet, then on the mini:
+Tailscale puts your own devices on a private encrypted network and issues real
+certificates for them. Four steps, and two places it commonly trips up.
+
+**1. Install it on the Mac mini.** Download the app from
+[tailscale.com/download/mac](https://tailscale.com/download/mac) and sign in.
+(Homebrew works too — `brew install --cask tailscale-app`, though the cask has
+been renamed before, so the download page is the safer bet.) Leave it running.
+
+**2. Put the CLI on your PATH.** This is the step that bites: the Mac app ships
+the `tailscale` command *inside its own bundle*, so a fresh terminal just says
+`zsh: command not found: tailscale`. Link it once:
+
+```bash
+sudo ln -sfn /Applications/Tailscale.app/Contents/MacOS/Tailscale /usr/local/bin/tailscale
+tailscale version   # should now print
+```
+
+(If you installed the CLI-only Homebrew formula — `brew install tailscale` —
+you get the command directly but have to run the `tailscaled` daemon yourself.
+The app is the easier option on a Mac.)
+
+**3. Turn on HTTPS certificates for your tailnet.** `tailscale serve` cannot
+issue a certificate until this is enabled, and the error it gives is not
+obvious. In the admin console at
+[login.tailscale.com/admin/dns](https://login.tailscale.com/admin/dns), enable
+**MagicDNS** and **HTTPS Certificates**. One-time, per tailnet.
+
+**4. Publish the app.** On the mini:
 
 ```bash
 tailscale serve --bg http://127.0.0.1:8787
+tailscale serve status      # shows the URL it is published at
 ```
+
+Then install Tailscale on your phone from the App Store or Play Store and sign
+into the same account. The phone can now reach that URL from anywhere.
 
 You get `https://<machine>.<tailnet>.ts.net` with a real, automatically renewed
 certificate. It works from anywhere — the gym, work — without opening a single
@@ -103,7 +133,11 @@ port to the internet, and only your own devices can reach it. For personal
 health data that's the right trade: a private network, not a public one with a
 password on top.
 
-Check it with `tailscale serve status`. To stop: `tailscale serve --https=443 off`.
+To stop serving: `tailscale serve --https=443 off`.
+
+If `tailscale serve` complains about certificates, it is almost always step 3.
+If the phone cannot load the URL, check Tailscale is connected on the phone —
+it is a VPN toggle, and iOS sometimes drops it after a restart.
 
 ### Caddy with your own domain
 

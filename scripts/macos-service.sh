@@ -60,6 +60,33 @@ node_bin() {
   printf '%s' "$bin"
 }
 
+# The Mac app keeps its CLI inside the bundle, so `tailscale` is usually not on
+# PATH even when Tailscale is installed and running. Say which case we're in
+# rather than printing a command that will just say "command not found".
+APP_CLI="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+
+tailscale_hint() {
+  if command -v tailscale >/dev/null 2>&1; then
+    printf '  tailscale serve --bg http://127.0.0.1:%s\n' "$PORT"
+    printf '  tailscale serve status    # prints the https://... address\n'
+    printf '\n  (One-time, in the admin console at login.tailscale.com/admin/dns:\n'
+    printf '   enable MagicDNS and HTTPS Certificates, or serve cannot get a cert.)\n'
+  elif [ -x "$APP_CLI" ]; then
+    printf '  Tailscale is installed, but its CLI lives inside the app bundle.\n'
+    printf '  Link it once, then publish:\n\n'
+    printf '  sudo ln -sfn "%s" /usr/local/bin/tailscale\n' "$APP_CLI"
+    printf '  tailscale serve --bg http://127.0.0.1:%s\n' "$PORT"
+  else
+    printf '  Tailscale is not installed. It gives this Mac a real certificate\n'
+    printf '  and lets your phone reach it from anywhere, without opening any\n'
+    printf '  port to the internet:\n\n'
+    printf '  Download it from https://tailscale.com/download/mac and sign in\n'
+    printf '  (or: brew install --cask tailscale-app), then:\n\n'
+    printf '  sudo ln -sfn "%s" /usr/local/bin/tailscale\n' "$APP_CLI"
+    printf '  tailscale serve --bg http://127.0.0.1:%s\n' "$PORT"
+  fi
+}
+
 build() {
   info "Building"
   ( cd "$REPO" && npm ci --silent && npm run build --silent )
@@ -132,22 +159,11 @@ cmd_install() {
       "$PORT" "$0" >&2
   fi
 
-  cat <<NEXT
-
-Database: $DB_FILE
-
-Next: give it HTTPS so the PWA installs properly on your phone.
-See docs/SELF-HOSTING.md — the short version, with Tailscale installed
-on both the Mac mini and the phone:
-
-    tailscale serve --bg http://127.0.0.1:$PORT
-
-That publishes it at https://<this-mac>.<your-tailnet>.ts.net, privately,
-with a real certificate and no ports open to the internet.
-
-Then open that address on each device and, in Settings -> Sync, connect it.
-Every device then shares this one database.
-NEXT
+  printf '\nDatabase: %s\n' "$DB_FILE"
+  printf '\nNext: give it HTTPS, so the app installs properly on your phone.\n\n'
+  tailscale_hint
+  printf '\nThen open that address on each device and, in Settings -> Sync,\nconnect it. Every device then shares this one database.\n'
+  printf 'Full walkthrough: docs/SELF-HOSTING.md\n'
 }
 
 cmd_uninstall() {
