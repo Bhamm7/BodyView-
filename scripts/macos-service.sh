@@ -283,6 +283,29 @@ cmd_doctor() {
   fi
   printf 'database   %s\n' "$([ -f "$DB_FILE" ] && echo "$DB_FILE ($(du -h "$DB_FILE" | cut -f1))" || echo 'not created yet')"
 
+  printf '\n--- reachable from other devices?\n'
+  case "$HOST" in
+    127.0.0.1|localhost|::1)
+      printf 'NO — bound to %s, which is this Mac only.\n' "$HOST"
+      printf 'To open it to your network, reinstall with:\n'
+      printf '  BODYVIEW_HOST=0.0.0.0 %s install\n' "$0"
+      ;;
+    *)
+      printf 'bound to %s — other devices should be able to connect at:\n' "$HOST"
+      local found=""
+      for iface in $(ifconfig -l 2>/dev/null); do
+        local addr
+        addr="$(ipconfig getifaddr "$iface" 2>/dev/null || true)"
+        [ -n "$addr" ] || continue
+        printf '  http://%s:%s\n' "$addr" "$PORT"
+        found=yes
+      done
+      [ -n "$found" ] || printf '  (no network address found — is this Mac online?)\n'
+      printf '  http://%s:%s   (.local name; needs mDNS on the other device)\n' \
+        "$(scutil --get LocalHostName 2>/dev/null || hostname -s).local" "$PORT"
+      ;;
+  esac
+
   printf '\n--- can it run outside launchd?\n'
   # Separates "the app is broken" from "the service definition is broken".
   # Uses a throwaway port and database so it cannot disturb the real ones.

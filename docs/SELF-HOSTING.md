@@ -235,23 +235,51 @@ reach it. To open it to your own network:
 BODYVIEW_HOST=0.0.0.0 ./scripts/macos-service.sh install
 ```
 
-Then from the other machine use the mini's own hostname, which survives your
-router handing out a different IP:
+Then check what address to use — this prints it, along with whether the server
+is actually listening on the network at all:
 
+```bash
+./scripts/macos-service.sh doctor
 ```
-http://<your-mac's-name>.local:8787
-```
 
-Windows 10 and 11 resolve `.local` names natively. If it does not resolve, use
-the address instead — on the mini, `ipconfig getifaddr en0` (or `en1` if that
-is empty) prints it.
+**Use the IP address**, e.g. `http://192.168.1.42:8787`.
 
-Two things to know:
+The `.local` name works from Macs, iPhones and iPads, which all speak mDNS. On
+**Windows it often does not** — Windows has had patchy mDNS support, and in
+practice `.local` resolves reliably only when Apple's Bonjour service is
+installed (it comes with iTunes, and separately as "Bonjour Print Services for
+Windows"). Don't fight it; use the IP.
+
+An IP can change when your router hands out a new lease. Two ways to pin it:
+
+- Give the mini a **DHCP reservation** in your router, so it always gets the
+  same address. Best option.
+- Or add a line to the Windows hosts file at
+  `C:\Windows\System32\drivers\etc\hosts` (edit as Administrator):
+  `192.168.1.42    bodyview` — then use `http://bodyview:8787`.
+
+Two more things to know:
 
 - macOS may pop up a firewall prompt the first time something connects from
-  another machine. Allow it.
+  another machine. Allow it. If you missed it, check System Settings → Network
+  → Firewall.
 - This puts the sync API on your local network with no authentication. Set a
   token (below) if anyone else uses that network.
+
+### When another machine cannot connect
+
+Work out whether it is the address or the connection. On Windows, in
+PowerShell:
+
+```powershell
+Test-NetConnection 192.168.1.42 -Port 8787
+```
+
+`TcpTestSucceeded : True` means the network path is fine and the problem is
+name resolution — use the IP. `False` means the connection itself is being
+refused or blocked: the server is still bound to localhost (run `doctor`), the
+macOS firewall is blocking it, or the two machines are not really on the same
+network — guest Wi-Fi and some mesh routers isolate clients from each other.
 
 This route has no HTTPS, so browsers will not install it as an app or run it
 offline. On a desktop that matters much less than on a phone. If you want it
