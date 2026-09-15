@@ -268,7 +268,8 @@ cmd_doctor() {
   if launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1; then
     launchctl print "$DOMAIN/$LABEL" \
       | grep -E "^\s+(state|pid|last exit code|program|path) " \
-      | sed 's/^[[:space:]]*/           /' || true
+      | awk '{ key = $1 " " $2; if (!(key in seen)) { seen[key] = 1; print "          " $0 } }' \
+      || true
   else
     printf '           job not loaded\n'
   fi
@@ -277,7 +278,9 @@ cmd_doctor() {
   printf 'port       %s on %s\n' "$PORT" "$HOST"
   if curl -sf "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
     printf 'health     responding\n'
-    printf 'records    %s\n' "$(curl -s "http://127.0.0.1:$PORT/api/health" | head -c 200)"
+    printf 'records    %s\n' "$(curl -s "http://127.0.0.1:$PORT/api/health" \
+      | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const c=JSON.parse(s).collections;const t=Object.values(c).reduce((a,b)=>a+b,0);console.log(t+" records across "+Object.keys(c).length+" collections")}catch{console.log("(unreadable)")}})' \
+      2>/dev/null || echo '(unreadable)')"
   else
     printf 'health     NOT RESPONDING\n'
   fi
@@ -311,14 +314,34 @@ cmd_doctor() {
   # Uses a throwaway port and database so it cannot disturb the real ones.
   if [ -f "$REPO/dist/index.html" ]; then
     local probe_db="${TMPDIR:-/tmp}/bodyview-doctor-$$.db"
+    local probe_out="${TMPDIR:-/tmp}/bodyview-doctor-$$.log"
+    local probe_pid=""
+
+    # Started in the background and stopped by hand rather than with `timeout`,
+    # which macOS does not ship. `exec` makes node the backgrounded process
+    # itself, so the pid below is the one to stop.
+    ( cd "$REPO" && exec env PORT=0 BODYVIEW_DB="$probe_db" node server/serve.mjs ) \
+      >"$probe_out" 2>&1 &
+    probe_pid=$!
+
+    # Stop as soon as it has clearly started, rather than always waiting.
+    local waited=0
+    while [ "$waited" -lt 20 ]; do
+      grep -q 'BodyView serving' "$probe_out" 2>/dev/null && break
+      kill -0 "$probe_pid" 2>/dev/null || break
+      sleep 0.25
+      waited=$((waited + 1))
+    done
+
+    kill "$probe_pid" 2>/dev/null || true
+    wait "$probe_pid" 2>/dev/null || true
+
     local out
-    # `timeout` exits 124 when it fires, which under `set -e -o pipefail` would
-    # abort this script mid-diagnosis. Timing out is the expected success case
-    # here — a server that starts is one that keeps running — so swallow it.
-    out="$(cd "$REPO" && PORT=0 BODYVIEW_DB="$probe_db" timeout 5 node server/serve.mjs 2>&1 | head -6 || true)"
-    rm -f "$probe_db" "$probe_db-wal" "$probe_db-shm"
+    out="$(head -6 "$probe_out" 2>/dev/null || true)"
+    rm -f "$probe_out" "$probe_db" "$probe_db-wal" "$probe_db-shm"
+
     if printf '%s' "$out" | grep -q 'BodyView serving'; then
-      printf 'yes — the app itself is fine, the problem is the service setup\n'
+      printf 'yes — the app itself is fine\n'
     else
       printf 'NO — it fails to start:\n%s\n' "${out:-(no output)}"
     fi
