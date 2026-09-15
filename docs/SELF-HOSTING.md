@@ -135,9 +135,57 @@ password on top.
 
 To stop serving: `tailscale serve --https=443 off`.
 
-If `tailscale serve` complains about certificates, it is almost always step 3.
+#### If `tailscale serve` hangs or errors
+
+First separate the two halves of the setup — the app and the tunnel are
+independent, and it is worth knowing which one is unhappy. On the mini:
+
+```bash
+curl -s http://127.0.0.1:8787/api/health
+```
+
+A line of JSON starting `{"ok":true` means BodyView itself is running fine and
+the problem is only the tunnel in front of it. Nothing to fix in the app.
+
+Then, in order:
+
+```bash
+tailscale status      # connected, and is this machine listed?
+tailscale ip -4       # should print a 100.x.y.z address
+tailscale cert "$(tailscale status --json | grep -o '"DNSName":"[^"]*' | head -1 | cut -d'"' -f4 | sed 's/\.$//')"
+```
+
+The `cert` command is the useful one: it does the certificate step on its own,
+so it tells you plainly whether that is what `serve` is stuck on. If it fails
+or hangs, **MagicDNS and HTTPS Certificates are not enabled** for your tailnet
+— that is step 3 above, in the admin console, and `serve` cannot finish without
+it.
+
+The first certificate can genuinely take a while to issue. A minute of silence
+is not a failure; five is.
+
 If the phone cannot load the URL, check Tailscale is connected on the phone —
 it is a VPN toggle, and iOS sometimes drops it after a restart.
+
+### Just getting it working on your own network
+
+If you would rather not deal with any of this yet, skip the tunnel. On the mini
+itself, `http://localhost:8787` is a secure context as far as browsers are
+concerned, so everything including the service worker works there.
+
+For other devices on your home Wi-Fi, reinstall the service bound to the LAN:
+
+```bash
+BODYVIEW_HOST=0.0.0.0 ./scripts/macos-service.sh install
+```
+
+Then open `http://<the-mini's-LAN-IP>:8787` from your phone. Sync works, and
+the app works. What you do not get is the service worker — so no offline
+support, and iOS gives you a bookmark rather than a real installed app. It is a
+reasonable way to try the thing out before committing to certificate setup.
+
+Bear in mind this puts the API on your local network with no token, so set one
+(see above) if that matters to you.
 
 ### Caddy with your own domain
 
