@@ -7,6 +7,7 @@
 #   ./scripts/macos-service.sh restart     restart the service
 #   ./scripts/macos-service.sh status      is it running, and on what port
 #   ./scripts/macos-service.sh logs        tail the service log
+#   ./scripts/macos-service.sh doctor      diagnose why it is not running
 #   ./scripts/macos-service.sh backup [dir] snapshot the SQLite database
 #   ./scripts/macos-service.sh sql         open a sqlite3 shell on the database
 #   ./scripts/macos-service.sh uninstall   stop and remove the service
@@ -148,15 +149,32 @@ cmd_install() {
 
   info "Starting the service"
   bootout_quiet
-  launchctl bootstrap "$DOMAIN" "$PLIST"
-  launchctl enable "$DOMAIN/$LABEL"
 
-  sleep 1
-  if curl -sf "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
+  # `enable` must come first. It clears any lingering disabled flag for this
+  # label in launchd's database, and a disabled job still bootstraps happily —
+  # it just never starts, reporting "not running / never exited". Enabling
+  # afterwards does not retroactively launch it.
+  launchctl enable "$DOMAIN/$LABEL" 2>/dev/null || true
+  launchctl bootstrap "$DOMAIN" "$PLIST"
+  # RunAtLoad should have started it; kickstart makes that certain rather than
+  # assumed, and is harmless when it is already running.
+  launchctl kickstart "$DOMAIN/$LABEL" 2>/dev/null || true
+
+  info "Waiting for it to answer"
+  local ready=""
+  for _ in $(seq 1 20); do
+    if curl -sf "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
+      ready=yes
+      break
+    fi
+    sleep 0.5
+  done
+
+  if [ -n "$ready" ]; then
     ok "serving on http://127.0.0.1:$PORT"
   else
-    printf '\033[33mwarning:\033[0m no response on port %s yet — check: %s logs\n' \
-      "$PORT" "$0" >&2
+    printf '\033[33mwarning:\033[0m no response on port %s.\n' "$PORT" >&2
+    printf '         Run: %s doctor\n' "$0" >&2
   fi
 
   printf '\nDatabase: %s\n' "$DB_FILE"
@@ -191,6 +209,7 @@ cmd_sql() {
 
 cmd_restart() {
   require_macos
+  launchctl enable "$DOMAIN/$LABEL" 2>/dev/null || true
   launchctl kickstart -k "$DOMAIN/$LABEL"
   ok "restarted"
 }
@@ -222,6 +241,77 @@ cmd_logs() {
   tail -f "$LOG_DIR/server.log"
 }
 
+# Everything worth knowing when it is not working, in one output to paste.
+cmd_doctor() {
+  require_macos
+  printf '\n--- environment\n'
+  printf 'macOS      %s\n' "$(sw_vers -productVersion 2>/dev/null || echo unknown)"
+  local node_path
+  node_path="$(command -v node || echo 'NOT FOUND')"
+  printf 'node       %s (%s)\n' "$("$node_path" --version 2>/dev/null || echo '-')" "$node_path"
+  if [ "$node_path" != "NOT FOUND" ] && "$node_path" -e 'require("node:sqlite")' >/dev/null 2>&1; then
+    printf 'sqlite     built in, usable\n'
+  else
+    printf 'sqlite     MISSING — node is too old, need 22.5+\n'
+  fi
+
+  printf '\n--- build\n'
+  printf 'repo       %s\n' "$REPO"
+  if [ -f "$REPO/dist/index.html" ]; then
+    printf 'dist/      built (%s files)\n' "$(find "$REPO/dist" -type f | wc -l | tr -d ' ')"
+  else
+    printf 'dist/      MISSING — run: %s install\n' "$0"
+  fi
+
+  printf '\n--- launchd\n'
+  printf 'plist      %s\n' "$([ -f "$PLIST" ] && echo present || echo MISSING)"
+  if launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1; then
+    launchctl print "$DOMAIN/$LABEL" \
+      | grep -E "^\s+(state|pid|last exit code|program|path) " \
+      | sed 's/^[[:space:]]*/           /' || true
+  else
+    printf '           job not loaded\n'
+  fi
+
+  printf '\n--- service\n'
+  printf 'port       %s on %s\n' "$PORT" "$HOST"
+  if curl -sf "http://127.0.0.1:$PORT/healthz" >/dev/null 2>&1; then
+    printf 'health     responding\n'
+    printf 'records    %s\n' "$(curl -s "http://127.0.0.1:$PORT/api/health" | head -c 200)"
+  else
+    printf 'health     NOT RESPONDING\n'
+  fi
+  printf 'database   %s\n' "$([ -f "$DB_FILE" ] && echo "$DB_FILE ($(du -h "$DB_FILE" | cut -f1))" || echo 'not created yet')"
+
+  printf '\n--- can it run outside launchd?\n'
+  # Separates "the app is broken" from "the service definition is broken".
+  # Uses a throwaway port and database so it cannot disturb the real ones.
+  if [ -f "$REPO/dist/index.html" ]; then
+    local probe_db="${TMPDIR:-/tmp}/bodyview-doctor-$$.db"
+    local out
+    # `timeout` exits 124 when it fires, which under `set -e -o pipefail` would
+    # abort this script mid-diagnosis. Timing out is the expected success case
+    # here — a server that starts is one that keeps running — so swallow it.
+    out="$(cd "$REPO" && PORT=0 BODYVIEW_DB="$probe_db" timeout 5 node server/serve.mjs 2>&1 | head -6 || true)"
+    rm -f "$probe_db" "$probe_db-wal" "$probe_db-shm"
+    if printf '%s' "$out" | grep -q 'BodyView serving'; then
+      printf 'yes — the app itself is fine, the problem is the service setup\n'
+    else
+      printf 'NO — it fails to start:\n%s\n' "${out:-(no output)}"
+    fi
+  else
+    printf '(skipped — nothing built)\n'
+  fi
+
+  printf '\n--- recent log\n'
+  if [ -f "$LOG_DIR/server.log" ]; then
+    tail -20 "$LOG_DIR/server.log"
+  else
+    printf '(no log file at %s)\n' "$LOG_DIR/server.log"
+  fi
+  printf '\n'
+}
+
 case "${1:-}" in
   install)   cmd_install ;;
   uninstall) cmd_uninstall ;;
@@ -229,10 +319,11 @@ case "${1:-}" in
   update)    cmd_update ;;
   status)    cmd_status ;;
   logs)      cmd_logs ;;
+  doctor)    cmd_doctor ;;
   backup)    cmd_backup "$@" ;;
   sql)       cmd_sql ;;
   *)
-    sed -n '3,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    sed -n '3,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
     exit 1
     ;;
 esac
