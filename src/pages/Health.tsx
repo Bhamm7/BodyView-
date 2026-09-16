@@ -63,13 +63,16 @@ export default function Health() {
       }
     >
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 'var(--sp-4)' }}>
-        <span className="card-title">Trends</span>
         <Segmented
-          value={days}
-          options={WINDOWS}
-          onChange={(v) => setDays(v)}
-          label="Time range"
+          value="metrics"
+          options={[
+            { value: 'metrics', label: 'Metrics' },
+            { value: 'blood', label: 'Bloodwork' },
+          ]}
+          onChange={(v) => v === 'blood' && navigate('/bloodwork')}
+          label="Section"
         />
+        <Segmented value={days} options={WINDOWS} onChange={(v) => setDays(v)} label="Time range" />
       </div>
 
       {tracked.length === 0 ? (

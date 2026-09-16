@@ -1,5 +1,7 @@
 import Dexie, { type EntityTable, type Table } from 'dexie';
 import type {
+  BloodPanel,
+  BloodResult,
   Compound,
   Cycle,
   DoseLog,
@@ -40,6 +42,8 @@ export const SYNCED_COLLECTIONS = [
   'workouts',
   'sets',
   'settings',
+  'bloodPanels',
+  'bloodResults',
 ] as const;
 
 export type SyncedCollection = (typeof SYNCED_COLLECTIONS)[number];
@@ -65,6 +69,8 @@ class BodyViewDB extends Dexie {
   workouts!: EntityTable<Workout, 'id'>;
   sets!: EntityTable<SetLog, 'id'>;
   settings!: EntityTable<Settings, 'id'>;
+  bloodPanels!: EntityTable<BloodPanel, 'id'>;
+  bloodResults!: EntityTable<BloodResult, 'id'>;
 
   /** Local-only: records deleted here, waiting to be pushed to the server. */
   _tombstones!: EntityTable<Tombstone, 'key'>;
@@ -128,6 +134,12 @@ class BodyViewDB extends Dexie {
             });
         }
       });
+
+    // v3 adds bloodwork: panels, and the individual results hanging off them.
+    this.version(3).stores({
+      bloodPanels: 'id, date, updatedAt',
+      bloodResults: 'id, panelId, marker, date, [marker+date], updatedAt',
+    });
 
     this.installChangeTracking();
   }

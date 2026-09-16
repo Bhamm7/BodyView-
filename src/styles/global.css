@@ -874,7 +874,19 @@ button.list-row:active { background: var(--surface-2); }
 
 .divider { height: 1px; background: var(--border); border: none; margin: var(--sp-4) 0; }
 
-.scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/*
+ * Horizontal scroll container.
+ *
+ * `flex-shrink: 0` matters: any overflow other than `visible` makes a flex
+ * item's automatic minimum size resolve to zero, so inside a flex column —
+ * a sheet body, say — this collapses to no height at all while its content
+ * sits invisibly inside it.
+ */
+.scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  flex-shrink: 0;
+}
 
 .sr-only {
   position: absolute;
@@ -1049,3 +1061,75 @@ table.data td.num, table.data th.num { text-align: right; }
   padding: 0 2px;
   font-size: 0.75rem;
 }
+
+/* ------------------------------------------------------------ bloodwork -- */
+
+.blood-review td { vertical-align: top; padding-top: 6px; }
+.blood-review .input { padding: 4px 8px; }
+
+/* Multi-select marker picker */
+.picker {
+  position: relative;
+}
+
+.picker-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: var(--sp-2);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-2);
+}
+
+.picker-group {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: var(--sp-3) var(--sp-2) 4px;
+}
+
+.picker-option {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 40px;
+  padding: 6px var(--sp-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.picker-option:hover { background: var(--surface-2); }
+.picker-option[aria-pressed='true'] { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+
+.picker-option .box {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 2px solid var(--border-strong);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.picker-option[aria-pressed='true'] .box {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.picker-option .opt-unit { margin-left: auto; color: var(--text-3); font-size: 0.75rem; }

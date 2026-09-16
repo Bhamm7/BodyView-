@@ -5,6 +5,7 @@ dist-ssr/
 .smoke/
 .smoke-sync/
 .smoke-forms/
+.smoke-blood/
 data/
 *.db
 *.db-wal

@@ -27,3 +27,7 @@ jobs:
         run: npm run smoke
       - name: Two-device sync test
         run: npm run smoke:sync
+      - name: Form behaviour test
+        run: npm run smoke:forms
+      - name: Bloodwork test
+        run: npm run smoke:blood

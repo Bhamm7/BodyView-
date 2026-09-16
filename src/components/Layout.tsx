@@ -18,6 +18,7 @@ export const NAV: NavItem[] = [
   { to: '/nutrition', label: 'Food', icon: '🍽️' },
   { to: '/training', label: 'Train', icon: '🏋️' },
   { to: '/calendar', label: 'Calendar', icon: '📅' },
+  { to: '/bloodwork', label: 'Bloodwork', icon: '🩸', secondary: true },
   { to: '/inventory', label: 'Stock', icon: '📦', secondary: true },
   { to: '/settings', label: 'Settings', icon: '⚙️', secondary: true },
 ];

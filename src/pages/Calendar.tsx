@@ -40,6 +40,8 @@ export default function Calendar() {
     useLiveQuery(() => db.meals.where('date').between(from, to, true, true).toArray(), [from, to], []) ?? [];
   const metrics =
     useLiveQuery(() => db.metrics.where('date').between(from, to, true, true).toArray(), [from, to], []) ?? [];
+  const blood =
+    useLiveQuery(() => db.bloodPanels.where('date').between(from, to, true, true).toArray(), [from, to], []) ?? [];
 
   /** Per-day marks, in a stable order so colours never jump around. */
   const marks = useMemo(() => {
@@ -68,6 +70,10 @@ export default function Calendar() {
       const entry = get(m.date);
       if (!entry.dots.includes('var(--c-3)')) entry.dots.push('var(--c-3)');
     }
+    for (const panel of blood) {
+      const entry = get(panel.date);
+      if (!entry.dots.includes('var(--c-5)')) entry.dots.push('var(--c-5)');
+    }
 
     // A stripe under the date marks a day a protocol schedules a dose on.
     for (const day of days) {
@@ -80,7 +86,7 @@ export default function Calendar() {
     }
 
     return map;
-  }, [doses, workouts, meals, metrics, protocols, compounds, days]);
+  }, [doses, workouts, meals, metrics, blood, protocols, compounds, days]);
 
   const now = today();
 
@@ -159,6 +165,9 @@ export default function Calendar() {
           </span>
           <span className="key">
             <i className="dot" style={{ background: 'var(--c-4)' }} /> Food
+          </span>
+          <span className="key">
+            <i className="dot" style={{ background: 'var(--c-5)' }} /> Bloodwork
           </span>
           <span className="key">
             <i className="dot" style={{ background: 'var(--text-3)' }} /> Dose taken

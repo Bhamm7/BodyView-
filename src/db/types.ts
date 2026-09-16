@@ -346,6 +346,41 @@ export interface SetLog {
 }
 
 /* ------------------------------------------------------------------ */
+/* Bloodwork                                                           */
+/* ------------------------------------------------------------------ */
+
+/** One blood draw. Results hang off it and share its date. */
+export interface BloodPanel {
+  id: ID;
+  date: ISODate;
+  /** Where it came from, e.g. "MyHealth Alberta" or a clinic name. */
+  lab?: string;
+  /** How it got in, for the user's own reference. */
+  source?: 'manual' | 'paste' | 'csv';
+  notes?: string;
+  updatedAt?: number;
+}
+
+export interface BloodResult {
+  id: ID;
+  panelId: ID;
+  /** Copied from the panel so a day or chart query needs no join. */
+  date: ISODate;
+  /** Catalogue key, or `custom:<slug>` for a marker we do not know. */
+  marker: string;
+  /** The name exactly as printed on the report. */
+  label: string;
+  value: number;
+  /** The unit as reported; converted to the marker's canonical unit to chart. */
+  unit: string;
+  /** The lab's own reference interval, which beats any built-in one. */
+  refLow?: number;
+  refHigh?: number;
+  note?: string;
+  updatedAt?: number;
+}
+
+/* ------------------------------------------------------------------ */
 /* Settings                                                            */
 /* ------------------------------------------------------------------ */
 

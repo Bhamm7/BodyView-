@@ -11,6 +11,8 @@ import { useCompoundMap, useExerciseMap, useSettings } from '@/hooks/useData';
 import { formatDayLong, formatTime, relativeDay, shiftDate, today } from '@/lib/date';
 import { dose as formatDose, num, pluralize } from '@/lib/format';
 import { toDisplay, metricUnit } from '@/lib/metricUnits';
+import { markerDef } from '@/db/bloodMarkers';
+import { FLAG_LABEL, FLAG_TONE, flagFor } from '@/lib/blood';
 import { totalMacros } from '@/lib/nutrition';
 import { workingSets, workoutVolume } from '@/lib/training';
 
@@ -59,11 +61,18 @@ export function DaySummary({ date }: { date: ISODate }) {
   const metrics = useLiveQuery(() => db.metrics.where('date').equals(date).toArray(), [date], []) ?? [];
   const meals = useLiveQuery(() => db.meals.where('date').equals(date).toArray(), [date], []) ?? [];
   const workouts = useLiveQuery(() => db.workouts.where('date').equals(date).toArray(), [date], []) ?? [];
+  const blood = useLiveQuery(() => db.bloodResults.where('date').equals(date).toArray(), [date], []) ?? [];
 
   const taken = doses.filter((d) => !d.skipped);
   const macros = totalMacros(meals);
 
-  if (taken.length === 0 && metrics.length === 0 && meals.length === 0 && workouts.length === 0) {
+  if (
+    taken.length === 0 &&
+    metrics.length === 0 &&
+    meals.length === 0 &&
+    workouts.length === 0 &&
+    blood.length === 0
+  ) {
     return <p className="tiny dim">Nothing recorded on this day.</p>;
   }
 
@@ -111,6 +120,12 @@ export function DaySummary({ date }: { date: ISODate }) {
           <span className="muted">{workouts.map((w) => w.name).join(', ')}</span>
         </div>
       )}
+      {blood.length > 0 && (
+        <div className="row tight">
+          <span aria-hidden="true">🩸</span>
+          <span className="muted">{pluralize(blood.length, 'blood marker')}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -124,6 +139,8 @@ function DayBody({ date }: { date: ISODate }) {
   const meals = useLiveQuery(() => db.meals.where('date').equals(date).toArray(), [date], []) ?? [];
   const workouts = useLiveQuery(() => db.workouts.where('date').equals(date).toArray(), [date], []) ?? [];
   const allSets = useLiveQuery(() => db.sets.toArray(), [], []) ?? [];
+  const bloodResults =
+    useLiveQuery(() => db.bloodResults.where('date').equals(date).toArray(), [date], []) ?? [];
 
   const macros = useMemo(() => totalMacros(meals), [meals]);
 
@@ -197,6 +214,40 @@ function DayBody({ date }: { date: ISODate }) {
           </div>
         )}
       </Card>
+
+      {bloodResults.length > 0 && (
+        <Card
+          title="Bloodwork"
+          action={
+            <button className="btn ghost sm" onClick={() => navigate('/bloodwork')}>
+              Charts
+            </button>
+          }
+        >
+          <div className="list">
+            {bloodResults.map((r) => {
+              const flag = flagFor(r);
+              return (
+                <div key={r.id} className="list-row">
+                  <span className="lead" aria-hidden="true">
+                    🩸
+                  </span>
+                  <span className="body">
+                    <span className="title">
+                      {num(r.value, markerDef(r.marker)?.precision ?? 2)}{' '}
+                      <span className="dim small">{r.unit}</span>
+                    </span>
+                    <span className="sub">{r.label}</span>
+                  </span>
+                  <span className="trail">
+                    <span className={`badge ${FLAG_TONE[flag]}`}>{FLAG_LABEL[flag]}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       <Card title="Training">
         {workouts.length === 0 ? (

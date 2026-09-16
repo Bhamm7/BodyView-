@@ -18,8 +18,32 @@ either way.
 | **Cycles** | Peptides, PEDs, vitamins and supplements. A protocol is a compound plus a schedule; it drives a daily checklist, 30-day adherence, and the stock projections. |
 | **Food** | Macro targets, a searchable food library, per-meal logging, and calorie/protein trends against target. |
 | **Train** | Exercise library, a live session logger built for one-handed use between sets, personal records, estimated 1RM trends, weekly volume and sets per muscle group. |
+| **Bloodwork** | Blood panels pasted from a lab report, uploaded as CSV, or typed in. Charts grouped so no plot ever carries two scales, reference bands from your own report, and a latest-vs-previous comparison. |
 | **Calendar** | A month at a glance: which days had doses, workouts, meals and readings, plus which days a protocol schedules a dose on. Tap any day for the full picture. |
 | **Stock** | What you have on the shelf, and when it runs out — worked out from your active protocols rather than entered by hand. |
+
+### Bloodwork
+
+Paste the results out of a patient portal (MyHealth Alberta, or any lab report)
+and they are parsed into markers, values, units and the lab's own reference
+ranges. Everything goes through a review table before it is saved — lab reports
+have no standard format, so the parser is a first pass you confirm, and any
+line it could not read is shown rather than dropped.
+
+Marker names are matched on the whole name, never a substring: reading
+"Reticulocyte Haemoglobin" as plain haemoglobin would file it into the wrong
+series and quietly corrupt a chart, so an unrecognised marker is kept under its
+printed name instead.
+
+Charts group markers by unit. Two markers share a plot only when they share a
+unit — a chart with two y-scales invites false comparisons — so testosterone
+and SHBG (both nmol/L) sit together while estradiol (pmol/L) gets its own. A
+group with more than six markers becomes small multiples rather than an
+unreadable tangle.
+
+Reference ranges printed on your report are stored with the result and always
+beat the built-in ones, which are shown as "typical" and are for orientation
+only. BodyView does not interpret results.
 
 ### Scheduling and stock projection
 
@@ -56,6 +80,8 @@ npm run dev          # http://localhost:5173
 | `npm test` | Unit tests for the scheduling, projection, stats and formatting logic |
 | `npm run smoke` | Drives the built app in a real browser through every core flow |
 | `npm run smoke:sync` | Two browser profiles against a real server: shared data, deletions, offline catch-up |
+| `npm run smoke:forms` | The stock and protocol sheets: validation, and the per-week/per-dose switch |
+| `npm run smoke:blood` | Importing a lab report through to charts and comparisons |
 | `npm run serve` | Serves a built `dist/` with the dependency-free static server |
 | `npm run icons` | Regenerates the PWA icon set |
 

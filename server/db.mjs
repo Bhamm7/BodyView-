@@ -37,6 +37,8 @@ export const COLLECTIONS = [
   'workouts',
   'sets',
   'settings',
+  'bloodPanels',
+  'bloodResults',
 ];
 
 const COLLECTION_SET = new Set(COLLECTIONS);
@@ -171,6 +173,20 @@ function createViews(db) {
              json_extract(data, '$.startedAt')  AS started_at,
              json_extract(data, '$.finishedAt') AS finished_at
       FROM workouts WHERE deleted = 0`,
+
+    v_blood: `
+      SELECT r.id,
+             json_extract(r.data, '$.date')    AS date,
+             json_extract(r.data, '$.marker')  AS marker,
+             json_extract(r.data, '$.label')   AS label,
+             json_extract(r.data, '$.value')   AS value,
+             json_extract(r.data, '$.unit')    AS unit,
+             json_extract(r.data, '$.refLow')  AS ref_low,
+             json_extract(r.data, '$.refHigh') AS ref_high,
+             json_extract(p.data, '$.lab')     AS lab
+      FROM bloodResults r
+      LEFT JOIN bloodPanels p ON p.id = json_extract(r.data, '$.panelId')
+      WHERE r.deleted = 0`,
 
     v_sets: `
       SELECT s.id,
