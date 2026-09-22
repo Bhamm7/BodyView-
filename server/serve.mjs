@@ -73,6 +73,7 @@ const MIME = {
 function cacheControl(pathname) {
   if (pathname.startsWith('/assets/')) return 'public, max-age=31536000, immutable';
   if (pathname === '/sw.js' || pathname === '/registerSW.js') return 'no-cache';
+  if (pathname === '/version.json') return 'no-store';
   if (pathname.endsWith('.webmanifest') || pathname.endsWith('.html')) return 'no-cache';
   return 'public, max-age=3600';
 }

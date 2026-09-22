@@ -333,9 +333,31 @@ more privilege than this needs, so the agent is the better default.
 
 ### Keeping it updated
 
-`./scripts/macos-service.sh update` pulls, rebuilds and restarts. A weekly
-`cron`/`launchd` entry can do it unattended, though on a personal app there's
-something to be said for updating it when you feel like it instead.
+Nothing updates itself. New code lands on GitHub; this machine only picks it up
+when you tell it to:
+
+```bash
+cd ~/BodyView
+./scripts/macos-service.sh update
+```
+
+That pulls, lists what changed, rebuilds, restarts, and then checks what the
+running service is *actually* serving — so it reports success only when the new
+build is live, rather than leaving you to find out in a browser.
+
+Every build is stamped with the commit it came from. To check what is deployed
+without opening anything:
+
+```bash
+curl -s http://localhost:8787/version.json
+```
+
+The same value is shown in the app under **Settings → About**. If the app looks
+old, compare the two: the same commit means the build is current and your
+browser is showing a cached page (reload with Cmd-Shift-R or Ctrl-F5); a
+different commit means the rebuild has not happened yet.
+
+`./scripts/macos-service.sh doctor` prints both, and flags the mismatch.
 
 ## Backups
 
