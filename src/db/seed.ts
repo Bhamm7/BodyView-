@@ -23,7 +23,16 @@ function seedId(kind: string, name: string): string {
   return `seed-${kind}-${slug}`;
 }
 
-const COMPOUND_SEED: Array<Omit<Compound, 'id'>> = [
+/**
+ * Bumped whenever rows are added to a catalogue below. Devices that seeded at
+ * an older version pick up only the newer rows — see {@link topUpCatalogue}.
+ */
+export const CATALOGUE_VERSION = 2;
+
+/** A seed row plus the catalogue version that introduced it (1 when absent). */
+type SeedCompound = Omit<Compound, 'id'> & { addedIn?: number };
+
+const COMPOUND_SEED: SeedCompound[] = [
   // Peptides
   { name: 'BPC-157', category: 'peptide', defaultUnit: 'mcg', route: 'subcutaneous', color: '#38bdf8' },
   { name: 'TB-500', category: 'peptide', defaultUnit: 'mg', route: 'subcutaneous', color: '#22d3ee' },
@@ -61,6 +70,103 @@ const COMPOUND_SEED: Array<Omit<Compound, 'id'>> = [
   { name: 'Ashwagandha', category: 'supplement', defaultDose: 600, defaultUnit: 'mg', route: 'oral', color: '#a3a3a3' },
   { name: 'L-Citrulline', category: 'supplement', defaultDose: 6, defaultUnit: 'g', route: 'oral', color: '#5eead4' },
   { name: 'Caffeine', category: 'supplement', defaultDose: 200, defaultUnit: 'mg', route: 'oral', color: '#d6a67c' },
+
+  // ---- Added in catalogue v2 ----
+
+  // Peptides and GH
+  { name: 'HGH (Somatropin)', category: 'peptide', defaultUnit: 'iu', route: 'subcutaneous', color: '#67e8f9', addedIn: 2 },
+  { name: 'IGF-1 LR3', category: 'peptide', defaultUnit: 'mcg', route: 'subcutaneous', color: '#7dd3fc', addedIn: 2 },
+  { name: 'Sermorelin', category: 'peptide', defaultUnit: 'mcg', route: 'subcutaneous', color: '#93c5fd', addedIn: 2 },
+  { name: 'Hexarelin', category: 'peptide', defaultUnit: 'mcg', route: 'subcutaneous', color: '#a5b4fc', addedIn: 2 },
+  { name: 'MK-677 (Ibutamoren)', category: 'peptide', defaultUnit: 'mg', route: 'oral', color: '#c7d2fe', addedIn: 2 },
+  { name: 'MOTS-c', category: 'peptide', defaultUnit: 'mg', route: 'subcutaneous', color: '#5eead4', addedIn: 2 },
+  { name: 'Epitalon', category: 'peptide', defaultUnit: 'mg', route: 'subcutaneous', color: '#99f6e4', addedIn: 2 },
+  { name: 'Thymosin Alpha-1', category: 'peptide', defaultUnit: 'mg', route: 'subcutaneous', color: '#6ee7b7', addedIn: 2 },
+  { name: 'AOD-9604', category: 'peptide', defaultUnit: 'mcg', route: 'subcutaneous', color: '#34d399', addedIn: 2 },
+  { name: 'Retatrutide', category: 'peptide', defaultUnit: 'mg', route: 'subcutaneous', color: '#f9a8d4', addedIn: 2 },
+  { name: 'Cagrilintide', category: 'peptide', defaultUnit: 'mg', route: 'subcutaneous', color: '#f0abfc', addedIn: 2 },
+  { name: 'PT-141 (Bremelanotide)', category: 'peptide', defaultUnit: 'mg', route: 'subcutaneous', color: '#e879f9', addedIn: 2 },
+  { name: 'Melanotan II', category: 'peptide', defaultUnit: 'mg', route: 'subcutaneous', color: '#d946ef', addedIn: 2 },
+  { name: 'Selank', category: 'peptide', defaultUnit: 'mg', route: 'nasal', color: '#c4b5fd', addedIn: 2 },
+  { name: 'Semax', category: 'peptide', defaultUnit: 'mg', route: 'nasal', color: '#ddd6fe', addedIn: 2 },
+  { name: 'KPV', category: 'peptide', defaultUnit: 'mcg', route: 'subcutaneous', color: '#bae6fd', addedIn: 2 },
+
+  // Performance compounds
+  { name: 'Primobolan (Methenolone Enanthate)', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#fb923c', addedIn: 2 },
+  { name: 'Testosterone Undecanoate', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#fdba74', addedIn: 2 },
+  { name: 'Sustanon 250', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#f97316', addedIn: 2 },
+  { name: 'Trenbolone Acetate', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#ea580c', addedIn: 2 },
+  { name: 'Trenbolone Enanthate', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#c2410c', addedIn: 2 },
+  { name: 'Nandrolone Phenylpropionate', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#fde047', addedIn: 2 },
+  { name: 'DHB (Dihydroboldenone)', category: 'ped', defaultUnit: 'mg', route: 'intramuscular', color: '#bef264', addedIn: 2 },
+  { name: 'Dianabol (Methandrostenolone)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#65a30d', addedIn: 2 },
+  { name: 'Winstrol (Stanozolol)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#a3e635', addedIn: 2 },
+  { name: 'Turinabol', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#4d7c0f', addedIn: 2 },
+  { name: 'Superdrol (Methasterone)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#3f6212', addedIn: 2 },
+  { name: 'Anadrol (Oxymetholone)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#166534', addedIn: 2 },
+  { name: 'Halotestin (Fluoxymesterone)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#15803d', addedIn: 2 },
+  { name: 'Ostarine (MK-2866)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#22c55e', addedIn: 2 },
+  { name: 'RAD-140 (Testolone)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#16a34a', addedIn: 2 },
+  { name: 'LGD-4033 (Ligandrol)', category: 'ped', defaultUnit: 'mg', route: 'oral', color: '#10b981', addedIn: 2 },
+  { name: 'Clenbuterol', category: 'ped', defaultUnit: 'mcg', route: 'oral', color: '#fca5a5', addedIn: 2 },
+
+  // Ancillaries
+  { name: 'Exemestane (Aromasin)', category: 'ancillary', defaultUnit: 'mg', route: 'oral', color: '#94a3b8', addedIn: 2 },
+  { name: 'Letrozole', category: 'ancillary', defaultUnit: 'mg', route: 'oral', color: '#9ca3af', addedIn: 2 },
+  { name: 'Clomiphene (Clomid)', category: 'ancillary', defaultUnit: 'mg', route: 'oral', color: '#a8a29e', addedIn: 2 },
+  { name: 'Enclomiphene', category: 'ancillary', defaultUnit: 'mg', route: 'oral', color: '#d6d3d1', addedIn: 2 },
+  { name: 'Raloxifene', category: 'ancillary', defaultUnit: 'mg', route: 'oral', color: '#e7e5e4', addedIn: 2 },
+  { name: 'Cabergoline', category: 'ancillary', defaultUnit: 'mcg', route: 'oral', color: '#cbd5e1', addedIn: 2 },
+  { name: 'Pramipexole', category: 'ancillary', defaultUnit: 'mcg', route: 'oral', color: '#a3a3a3', addedIn: 2 },
+  { name: 'Finasteride', category: 'ancillary', defaultUnit: 'mg', route: 'oral', color: '#bfdbfe', addedIn: 2 },
+  { name: 'Dutasteride', category: 'ancillary', defaultUnit: 'mg', route: 'oral', color: '#c7d2fe', addedIn: 2 },
+
+  // Cardiovascular, renal and metabolic medications
+  { name: 'Nebivolol', category: 'medication', defaultUnit: 'mg', route: 'oral', color: '#60a5fa', addedIn: 2 },
+  { name: 'Metoprolol Succinate', category: 'medication', defaultUnit: 'mg', route: 'oral', color: '#3b82f6', addedIn: 2 },
+  { name: 'Amlodipine', category: 'medication', defaultUnit: 'mg', route: 'oral', color: '#2563eb', addedIn: 2 },
+  { name: 'Losartan', category: 'medication', defaultUnit: 'mg', route: 'oral', color: '#1d4ed8', addedIn: 2 },
+  { name: 'Lisinopril', category: 'medication', defaultUnit: 'mg', route: 'oral', color: '#4f46e5', addedIn: 2 },
+  { name: 'Eplerenone', category: 'medication', defaultUnit: 'mg', route: 'oral', color: '#6366f1', addedIn: 2 },
+  { name: 'Spironolactone', category: 'medication', defaultUnit: 'mg', route: 'oral', color: '#818cf8', addedIn: 2 },
+  { name: 'Empagliflozin', category: 'medication', defaultUnit: 'mg', route: 'oral', color: '#0ea5e9', addedIn: 2 },
+  { name: 'Metformin', category: 'medication', defaultUnit: 'mg', route: 'oral', color: '#0284c7', addedIn: 2 },
+  { name: 'Rosuvastatin', category: 'medication', defaultUnit: 'mg', route: 'oral', color: '#14b8a6', addedIn: 2 },
+  { name: 'Atorvastatin', category: 'medication', defaultUnit: 'mg', route: 'oral', color: '#0d9488', addedIn: 2 },
+  { name: 'Ezetimibe', category: 'medication', defaultUnit: 'mg', route: 'oral', color: '#2dd4bf', addedIn: 2 },
+  { name: 'Liothyronine (T3)', category: 'medication', defaultUnit: 'mcg', route: 'oral', color: '#f472b6', addedIn: 2 },
+  { name: 'Levothyroxine (T4)', category: 'medication', defaultUnit: 'mcg', route: 'oral', color: '#fb7185', addedIn: 2 },
+  { name: 'Ibuprofen', category: 'medication', defaultUnit: 'mg', route: 'oral', color: '#f87171', addedIn: 2 },
+  { name: 'Acetaminophen', category: 'medication', defaultUnit: 'mg', route: 'oral', color: '#fecdd3', addedIn: 2 },
+  { name: 'Aspirin (low dose)', category: 'medication', defaultDose: 81, defaultUnit: 'mg', route: 'oral', color: '#ef4444', addedIn: 2 },
+  { name: 'Famotidine', category: 'medication', defaultUnit: 'mg', route: 'oral', color: '#fdba74', addedIn: 2 },
+
+  // Vitamins and supplements
+  { name: 'NAC (N-Acetylcysteine)', category: 'supplement', defaultDose: 600, defaultUnit: 'mg', route: 'oral', color: '#a7f3d0', addedIn: 2 },
+  { name: 'Taurine', category: 'supplement', defaultDose: 2, defaultUnit: 'g', route: 'oral', color: '#99f6e4', addedIn: 2 },
+  { name: 'Berberine', category: 'supplement', defaultDose: 500, defaultUnit: 'mg', route: 'oral', color: '#fbbf24', addedIn: 2 },
+  { name: 'Citrus Bergamot', category: 'supplement', defaultDose: 1000, defaultUnit: 'mg', route: 'oral', color: '#fcd34d', addedIn: 2 },
+  { name: 'CoQ10 (Ubiquinol)', category: 'supplement', defaultDose: 200, defaultUnit: 'mg', route: 'oral', color: '#fde68a', addedIn: 2 },
+  { name: 'Curcumin', category: 'supplement', defaultDose: 500, defaultUnit: 'mg', route: 'oral', color: '#f59e0b', addedIn: 2 },
+  { name: 'Glycine', category: 'supplement', defaultDose: 3, defaultUnit: 'g', route: 'oral', color: '#e2e8f0', addedIn: 2 },
+  { name: 'Beta-Alanine', category: 'supplement', defaultDose: 3.2, defaultUnit: 'g', route: 'oral', color: '#cbd5e1', addedIn: 2 },
+  { name: 'L-Carnitine', category: 'supplement', defaultDose: 2, defaultUnit: 'g', route: 'oral', color: '#94a3b8', addedIn: 2 },
+  { name: 'Whey Protein Isolate', category: 'supplement', defaultDose: 30, defaultUnit: 'g', route: 'oral', color: '#f5f5f4', addedIn: 2 },
+  { name: 'Psyllium Husk', category: 'supplement', defaultDose: 5, defaultUnit: 'g', route: 'oral', color: '#d6d3d1', addedIn: 2 },
+  { name: 'Electrolytes', category: 'supplement', defaultDose: 1, defaultUnit: 'g', route: 'oral', color: '#7dd3fc', addedIn: 2 },
+  { name: 'Potassium Citrate', category: 'supplement', defaultDose: 99, defaultUnit: 'mg', route: 'oral', color: '#bae6fd', addedIn: 2 },
+  { name: 'Sodium Bicarbonate', category: 'supplement', defaultDose: 5, defaultUnit: 'g', route: 'oral', color: '#e0f2fe', addedIn: 2 },
+  { name: 'Alpha-GPC', category: 'supplement', defaultDose: 300, defaultUnit: 'mg', route: 'oral', color: '#c4b5fd', addedIn: 2 },
+  { name: 'L-Theanine', category: 'supplement', defaultDose: 200, defaultUnit: 'mg', route: 'oral', color: '#ddd6fe', addedIn: 2 },
+  { name: 'Melatonin', category: 'supplement', defaultDose: 1, defaultUnit: 'mg', route: 'oral', color: '#a78bfa', addedIn: 2 },
+  { name: 'Rhodiola Rosea', category: 'supplement', defaultDose: 400, defaultUnit: 'mg', route: 'oral', color: '#c084fc', addedIn: 2 },
+  { name: 'Inositol', category: 'supplement', defaultDose: 2, defaultUnit: 'g', route: 'oral', color: '#f0abfc', addedIn: 2 },
+  { name: 'Vitamin E (Mixed Tocopherols)', category: 'vitamin', defaultDose: 200, defaultUnit: 'iu', route: 'oral', color: '#fef08a', addedIn: 2 },
+  { name: 'Methylfolate', category: 'vitamin', defaultDose: 400, defaultUnit: 'mcg', route: 'oral', color: '#86efac', addedIn: 2 },
+  { name: 'Selenium', category: 'vitamin', defaultDose: 200, defaultUnit: 'mcg', route: 'oral', color: '#fdba74', addedIn: 2 },
+  { name: 'Iodine', category: 'vitamin', defaultDose: 150, defaultUnit: 'mcg', route: 'oral', color: '#a5f3fc', addedIn: 2 },
+  { name: 'Boron', category: 'vitamin', defaultDose: 6, defaultUnit: 'mg', route: 'oral', color: '#d9f99d', addedIn: 2 },
+  { name: 'Iron (Bisglycinate)', category: 'vitamin', defaultDose: 25, defaultUnit: 'mg', route: 'oral', color: '#fecaca', addedIn: 2 },
 ];
 
 const EX = (
@@ -209,9 +315,7 @@ export async function seedIfEmpty(): Promise<void> {
       // server is simply overwritten with identical content rather than
       // colliding.
       if ((await db.compounds.count()) === 0) {
-        await db.compounds.bulkPut(
-          COMPOUND_SEED.map((c) => ({ ...c, id: seedId('compound', c.name) })),
-        );
+        await db.compounds.bulkPut(COMPOUND_SEED.map(toCompound));
       }
       if ((await db.exercises.count()) === 0) {
         await db.exercises.bulkPut(
@@ -227,5 +331,43 @@ export async function seedIfEmpty(): Promise<void> {
     },
   );
 
-  await saveSettings({ ...DEFAULT_SETTINGS, ...settings, seededAt: new Date().toISOString() });
+  await saveSettings({
+    ...DEFAULT_SETTINGS,
+    ...settings,
+    seededAt: new Date().toISOString(),
+    compoundCatalogueVersion: CATALOGUE_VERSION,
+  });
+}
+
+/** Drops the seed-only `addedIn` marker and derives the row's stable id. */
+function toCompound(seed: SeedCompound): Compound {
+  const { addedIn: _addedIn, ...rest } = seed;
+  return { ...rest, id: seedId('compound', seed.name) };
+}
+
+/**
+ * Adds catalogue entries introduced since this device last seeded.
+ *
+ * Without this, a device that seeded at v1 would never see a compound added
+ * later — `seedIfEmpty` is a one-shot, and the compounds table is no longer
+ * empty. Only rows newer than the device's recorded version are considered, so
+ * a compound the user deliberately deleted does not come back, and rows that
+ * already exist (seeded here, or arrived from the server) are left untouched
+ * rather than overwritten with the stock definition.
+ */
+export async function topUpCatalogue(): Promise<void> {
+  const settings = await getSettings();
+  if (!settings.seededAt) return;
+
+  const from = settings.compoundCatalogueVersion ?? 1;
+  if (from >= CATALOGUE_VERSION) return;
+
+  const candidates = COMPOUND_SEED.filter((c) => (c.addedIn ?? 1) > from).map(toCompound);
+  if (candidates.length > 0) {
+    const existing = await db.compounds.bulkGet(candidates.map((c) => c.id));
+    const missing = candidates.filter((_, i) => existing[i] == null);
+    if (missing.length > 0) await db.compounds.bulkPut(missing);
+  }
+
+  await saveSettings({ compoundCatalogueVersion: CATALOGUE_VERSION });
 }

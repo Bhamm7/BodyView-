@@ -1,6 +1,6 @@
-import type { ISODate, Protocol, Schedule } from '@/db/types';
+import type { DoseUnit, ISODate, Protocol, Schedule } from '@/db/types';
 import { daysBetween, fromISODate } from './date';
-import { pluralize } from './format';
+import { dose as formatDose, pluralize } from './format';
 
 /** Whether the protocol's window covers this date (ignores the schedule). */
 export function isWithinWindow(protocol: Protocol, date: ISODate): boolean {
@@ -59,6 +59,51 @@ export function dailyAverageDose(protocol: Protocol): number {
       return (perDosingDay * on) / (on + off);
     }
   }
+}
+
+/** True when the pattern puts a dose on every calendar day in the window. */
+export function isDaily(schedule: Schedule): boolean {
+  switch (schedule.kind) {
+    case 'everyNDays':
+      return Math.max(1, schedule.intervalDays ?? 1) === 1;
+    case 'weekdays':
+      return (schedule.days ?? []).length === 7;
+    case 'cycling':
+      return Math.max(0, schedule.daysOff ?? 0) === 0;
+  }
+}
+
+export interface DoseRate {
+  /** Average amount per calendar day, in the protocol's own unit. */
+  perDay: number;
+  /** Average amount per calendar week, in the protocol's own unit. */
+  perWeek: number;
+  unit: DoseUnit;
+  /** Which of the two reads naturally for this schedule. */
+  cadence: 'day' | 'week';
+  /** The headline rate, e.g. "250 mg/week" or "5 g/day". */
+  label: string;
+  /** Both rates, for places with room: "250 mg/week · 35.7 mg/day". */
+  longLabel: string;
+}
+
+/**
+ * Normalizes a protocol to a rate, so "125 mg, Mon and Thu" reads as the
+ * 250 mg/week it actually is. Daily protocols are quoted per day, everything
+ * less frequent per week — a weekly total is how those are prescribed and
+ * discussed, and it is the number that makes two protocols comparable.
+ */
+export function doseRate(protocol: Protocol): DoseRate {
+  const perDay = dailyAverageDose(protocol);
+  const perWeek = perDay * 7;
+  const cadence: 'day' | 'week' = isDaily(protocol.schedule) ? 'day' : 'week';
+  const unit = protocol.unit;
+  const label = `${formatDose(cadence === 'day' ? perDay : perWeek, unit)}/${cadence}`;
+  const other =
+    cadence === 'day'
+      ? `${formatDose(perWeek, unit)}/week`
+      : `${formatDose(perDay, unit)}/day`;
+  return { perDay, perWeek, unit, cadence, label, longLabel: `${label} · ${other}` };
 }
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

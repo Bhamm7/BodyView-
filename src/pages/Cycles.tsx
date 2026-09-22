@@ -10,7 +10,7 @@ import { ProtocolSheet } from '@/components/ProtocolSheet';
 import { useCompoundMap, useCompounds, useProtocols } from '@/hooks/useData';
 import { combineDateTime, formatDay, lastNDays, nowTime, relativeDay, today } from '@/lib/date';
 import { dose as formatDose, num, pluralize } from '@/lib/format';
-import { protocolProgress, remainingLabel, scheduleLabel } from '@/lib/schedule';
+import { doseRate, protocolProgress, remainingLabel, scheduleLabel } from '@/lib/schedule';
 import { adherence, consumeFromInventory } from '@/lib/doses';
 import { DOSE_UNITS } from '@/lib/units';
 
@@ -113,6 +113,7 @@ export default function Cycles() {
               {active.map((p) => {
                 const compound = compoundMap.get(p.compoundId);
                 const progress = protocolProgress(p, date);
+                const rate = doseRate(p);
                 return (
                   <button
                     key={p.id}
@@ -127,8 +128,13 @@ export default function Cycles() {
                       </span>
                       <span className="badge accent">{remainingLabel(p, date)}</span>
                     </div>
-                    <div className="small muted" style={{ margin: '6px 0' }}>
-                      {formatDose(p.dose, p.unit)} · {scheduleLabel(p.schedule)}
+                    <div className="row" style={{ margin: '6px 0', gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
+                      <span className="badge accent mono" title={rate.longLabel}>
+                        {rate.label}
+                      </span>
+                      <span className="small muted">
+                        {formatDose(p.dose, p.unit)} · {scheduleLabel(p.schedule)}
+                      </span>
                     </div>
                     {progress.percent != null && (
                       <>
@@ -160,7 +166,7 @@ export default function Cycles() {
                       <span className="body">
                         <span className="title">{compound?.name ?? 'Unknown'}</span>
                         <span className="sub">
-                          {formatDose(p.dose, p.unit)} · {formatDay(p.startDate)}
+                          {formatDose(p.dose, p.unit)} · {doseRate(p).label} · {formatDay(p.startDate)}
                           {p.endDate ? ` → ${formatDay(p.endDate)}` : ''}
                         </span>
                       </span>

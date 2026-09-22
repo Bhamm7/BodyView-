@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './styles/global.css';
-import { seedIfEmpty } from './db/seed';
+import { seedIfEmpty, topUpCatalogue } from './db/seed';
 import { isSyncConfigured, sync } from './lib/sync';
 
 /**
@@ -17,6 +17,8 @@ async function boot() {
     console.error('Initial sync failed', err);
   }
   await seedIfEmpty();
+  // Catalogue additions reach devices that seeded at an earlier version.
+  await topUpCatalogue();
 }
 
 boot().catch((err) => console.error('Startup failed', err));

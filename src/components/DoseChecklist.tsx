@@ -6,7 +6,7 @@ import { dueDoses, extraDoses, skipDose, takeDose, undoDose } from '@/lib/doses'
 import { useActiveProtocols, useCompoundMap } from '@/hooks/useData';
 import { dose as formatDose } from '@/lib/format';
 import { formatTime } from '@/lib/date';
-import { protocolProgress } from '@/lib/schedule';
+import { doseRate, protocolProgress } from '@/lib/schedule';
 import { EmptyState, useToast } from './ui';
 
 /**
@@ -49,6 +49,7 @@ export function DoseChecklist({ date, compact }: { date: ISODate; compact?: bool
           const compound = compounds.get(protocol.compoundId);
           const key = `${protocol.id}:${slot}`;
           const progress = protocolProgress(protocol, date);
+          const rate = doseRate(protocol);
           const done = !!log && !log.skipped;
           const skipped = !!log?.skipped;
 
@@ -93,6 +94,10 @@ export function DoseChecklist({ date, compact }: { date: ISODate; compact?: bool
                 <div className="sub">
                   {formatDose(protocol.dose, protocol.unit)}
                   {protocol.schedule.timesPerDay > 1 ? ` · dose ${slot + 1}` : ''}
+                  {' · '}
+                  <span className="mono" title={rate.longLabel}>
+                    {rate.label}
+                  </span>
                   {' · '}
                   {progress.label}
                   {log && !skipped ? ` · ${formatTime(log.takenAt)}` : ''}

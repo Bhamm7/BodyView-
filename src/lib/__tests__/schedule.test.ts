@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { Protocol, Schedule } from '@/db/types';
-import { dailyAverageDose, isScheduledOn, scheduleLabel } from '../schedule';
+import { dailyAverageDose, doseRate, isDaily, isScheduledOn, scheduleLabel } from '../schedule';
 import { dateRange } from '../date';
 
 const protocol = (schedule: Schedule, over: Partial<Protocol> = {}): Protocol => ({
@@ -117,5 +117,56 @@ describe('scheduleLabel', () => {
       scheduleLabel({ kind: 'cycling', daysOn: 5, daysOff: 2, timesPerDay: 1 }),
       '5 on / 2 off',
     );
+  });
+});
+
+describe('doseRate', () => {
+  it('quotes an every-other-day protocol per week', () => {
+    const p = protocol({ kind: 'everyNDays', intervalDays: 2, timesPerDay: 1 });
+    const rate = doseRate(p);
+    assert.equal(rate.cadence, 'week');
+    assert.equal(rate.perWeek, 350);
+    assert.equal(rate.label, '350 mg/week');
+  });
+
+  it('quotes a daily protocol per day', () => {
+    const p = protocol({ kind: 'everyNDays', intervalDays: 1, timesPerDay: 1 });
+    const rate = doseRate(p);
+    assert.equal(rate.cadence, 'day');
+    assert.equal(rate.label, '100 mg/day');
+    assert.equal(rate.perWeek, 700);
+  });
+
+  it('sums the week for a two-day split', () => {
+    const p = protocol({ kind: 'weekdays', days: [1, 4], timesPerDay: 1 }, { dose: 125 });
+    assert.equal(doseRate(p).label, '250 mg/week');
+  });
+
+  it('counts every dose of a multi-dose day', () => {
+    const p = protocol({ kind: 'everyNDays', intervalDays: 1, timesPerDay: 2 }, { dose: 2.5 });
+    assert.equal(doseRate(p).label, '5 mg/day');
+  });
+
+  it('prorates a cycled protocol over its off days', () => {
+    const p = protocol({ kind: 'cycling', daysOn: 2, daysOff: 5, timesPerDay: 1 });
+    assert.equal(doseRate(p).cadence, 'week');
+    assert.equal(doseRate(p).perWeek, 200);
+  });
+
+  it('always offers the other cadence alongside', () => {
+    const p = protocol({ kind: 'weekdays', days: [1, 4], timesPerDay: 1 }, { dose: 125 });
+    assert.match(doseRate(p).longLabel, /250 mg\/week · 35.71 mg\/day/);
+  });
+
+  it('treats every pattern that hits all seven days as daily', () => {
+    assert.equal(isDaily({ kind: 'everyNDays', intervalDays: 1, timesPerDay: 1 }), true);
+    assert.equal(isDaily({ kind: 'weekdays', days: [0, 1, 2, 3, 4, 5, 6], timesPerDay: 1 }), true);
+    assert.equal(isDaily({ kind: 'cycling', daysOn: 5, daysOff: 0, timesPerDay: 1 }), true);
+    assert.equal(isDaily({ kind: 'cycling', daysOn: 5, daysOff: 2, timesPerDay: 1 }), false);
+  });
+
+  it('agrees with the daily average used for stock projections', () => {
+    const p = protocol({ kind: 'weekdays', days: [1, 3, 5], timesPerDay: 1 });
+    assert.equal(doseRate(p).perDay, dailyAverageDose(p));
   });
 });

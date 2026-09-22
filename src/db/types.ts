@@ -366,4 +366,6 @@ export interface Settings {
   /** Metrics pinned to the dashboard, in display order. */
   dashboardMetrics: MetricKey[];
   seededAt?: ISODateTime;
+  /** Highest seed-catalogue version applied here; drives catalogue top-ups. */
+  compoundCatalogueVersion?: number;
 }

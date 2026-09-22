@@ -3,7 +3,7 @@ import { db, removeRecord, uid } from '@/db/db';
 import type { DoseUnit, Protocol, Schedule, ScheduleKind } from '@/db/types';
 import { DOSE_UNITS } from '@/lib/units';
 import { shiftDate, today } from '@/lib/date';
-import { dailyAverageDose, scheduleLabel, WEEKDAY_LABELS } from '@/lib/schedule';
+import { doseRate, scheduleLabel, WEEKDAY_LABELS } from '@/lib/schedule';
 import { num } from '@/lib/format';
 import { useCompounds } from '@/hooks/useData';
 import { Field, NumberInput, Segmented, Sheet, Stepper, useToast } from './ui';
@@ -83,7 +83,7 @@ export function ProtocolSheet({
     [kind, intervalDays, days, daysOn, daysOff, timesPerDay],
   );
 
-  const perDay = dose != null ? dailyAverageDose({ dose, schedule } as Protocol) : 0;
+  const rate = dose != null ? doseRate({ dose, unit, schedule } as Protocol) : null;
   const valid = !!compoundId && dose != null && dose > 0 && (kind !== 'weekdays' || days.length > 0);
 
   const save = async () => {
@@ -264,14 +264,13 @@ export function ProtocolSheet({
       <div className="card" style={{ background: 'var(--surface-2)' }}>
         <div className="card-title">Summary</div>
         <div className="small">
-          {scheduleLabel(schedule)} · averages{' '}
-          <strong className="mono">
-            {num(perDay, 2)} {unit === 'iu' ? 'IU' : unit}
-          </strong>{' '}
-          per day
+          {scheduleLabel(schedule)} ·{' '}
+          <strong className="mono">{rate ? rate.label : '—'}</strong>
         </div>
         <div className="tiny dim" style={{ marginTop: 4 }}>
-          Used to project when your stock runs out.
+          {rate
+            ? `That is ${num(rate.perWeek, 2)} ${unit === 'iu' ? 'IU' : unit} a week, ${num(rate.perDay, 2)} ${unit === 'iu' ? 'IU' : unit} a day — also used to project when your stock runs out.`
+            : 'Enter a dose to see the weekly and daily rate.'}
         </div>
       </div>
 
