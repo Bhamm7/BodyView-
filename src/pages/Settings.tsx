@@ -234,6 +234,13 @@ export default function SettingsPage() {
       </Card>
 
       <Card title="About">
+        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 'var(--sp-3)' }}>
+          <span className="small muted">Version</span>
+          <span className="mono small">
+            {__BUILD_COMMIT__}
+            <span className="dim tiny"> · built {new Date(__BUILD_TIME__).toLocaleString()}</span>
+          </span>
+        </div>
         <p className="small muted">
           BodyView is a personal tracker. It records what you enter and does the arithmetic — it
           does not give medical or dosing advice. Talk to a clinician about anything that matters.

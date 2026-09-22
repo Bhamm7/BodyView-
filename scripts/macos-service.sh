@@ -264,10 +264,53 @@ cmd_restart() {
 
 cmd_update() {
   require_macos
+  use_installed_config
+
+  local before after
+  before="$(cd "$REPO" && git rev-parse --short HEAD)"
+
   info "Pulling latest"
   ( cd "$REPO" && git pull --ff-only )
+
+  after="$(cd "$REPO" && git rev-parse --short HEAD)"
+
+  if [ "$before" = "$after" ]; then
+    ok "already up to date at $after"
+  else
+    info "Updating $before -> $after"
+    ( cd "$REPO" && git --no-pager log --oneline "$before..$after" | sed 's/^/           /' )
+  fi
+
   build
   cmd_restart
+
+  # Confirm the running service is actually serving the new build, rather than
+  # reporting success and leaving the user to find out in a browser.
+  info "Checking what is now being served"
+  local served=""
+  for _ in $(seq 1 20); do
+    served="$(curl -sf "http://127.0.0.1:$PORT/version.json" 2>/dev/null \
+      | sed -n 's/.*"commit"[^"]*"\([^"]*\)".*/\1/p')"
+    [ -n "$served" ] && break
+    sleep 0.5
+  done
+
+  if [ -z "$served" ]; then
+    printf '\033[33mwarning:\033[0m the service did not answer — run: %s doctor\n' "$0" >&2
+    return 1
+  fi
+
+  if [ "$served" = "$after" ]; then
+    ok "serving $served"
+    printf '\n'
+    printf 'In the browser, the page may still be cached. Reload with\n'
+    printf 'Cmd-Shift-R (Mac) or Ctrl-F5 (Windows) to be sure.\n'
+  else
+    printf '\033[31merror:\033[0m serving %s but the repo is at %s — the rebuild did not take.\n' \
+      "$served" "$after" >&2
+    printf '        Run: %s doctor\n' "$0" >&2
+    return 1
+  fi
 }
 
 cmd_status() {
@@ -337,6 +380,16 @@ cmd_doctor() {
     printf 'health     NOT RESPONDING\n'
   fi
   printf 'database   %s\n' "$([ -f "$DB_FILE" ] && echo "$DB_FILE ($(du -h "$DB_FILE" | cut -f1))" || echo 'not created yet')"
+
+  local repo_commit served_commit
+  repo_commit="$(cd "$REPO" && git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  served_commit="$(curl -sf "http://127.0.0.1:$PORT/version.json" 2>/dev/null \
+    | sed -n 's/.*"commit"[^"]*"\([^"]*\)".*/\1/p')"
+  printf 'repo at    %s\n' "$repo_commit"
+  printf 'serving    %s\n' "${served_commit:-unknown}"
+  if [ -n "$served_commit" ] && [ "$served_commit" != "$repo_commit" ]; then
+    printf '           ^ STALE — run: %s update\n' "$0"
+  fi
 
   printf '\n--- reachable from other devices?\n'
   case "$HOST" in
