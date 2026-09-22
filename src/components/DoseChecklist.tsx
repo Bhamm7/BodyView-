@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
-import type { DoseLog, ISODate } from '@/db/types';
+import type { DoseLog, ISODate, Protocol } from '@/db/types';
 import { dueDoses, extraDoses, skipDose, takeDose, undoDose } from '@/lib/doses';
 import { useActiveProtocols, useCompoundMap } from '@/hooks/useData';
 import { dose as formatDose } from '@/lib/format';
@@ -13,7 +13,16 @@ import { EmptyState, useToast } from './ui';
  * The day's dose checklist. One tap logs a dose and draws it out of stock;
  * long-running protocols show how far through the cycle the day is.
  */
-export function DoseChecklist({ date, compact }: { date: ISODate; compact?: boolean }) {
+export function DoseChecklist({
+  date,
+  compact,
+  onEditProtocol,
+}: {
+  date: ISODate;
+  compact?: boolean;
+  /** When given, the body of a row opens its protocol for editing. */
+  onEditProtocol?: (protocol: Protocol) => void;
+}) {
   const protocols = useActiveProtocols();
   const compounds = useCompoundMap();
   const toast = useToast();
@@ -83,7 +92,23 @@ export function DoseChecklist({ date, compact }: { date: ISODate; compact?: bool
                 {done ? '✓' : skipped ? '–' : ''}
               </button>
 
-              <div className="body">
+              <div
+                className="body"
+                role={onEditProtocol ? 'button' : undefined}
+                tabIndex={onEditProtocol ? 0 : undefined}
+                style={onEditProtocol ? { cursor: 'pointer' } : undefined}
+                onClick={onEditProtocol ? () => onEditProtocol(protocol) : undefined}
+                onKeyDown={
+                  onEditProtocol
+                    ? (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onEditProtocol(protocol);
+                        }
+                      }
+                    : undefined
+                }
+              >
                 <div
                   className="title row tight"
                   style={{ textDecoration: skipped ? 'line-through' : undefined }}

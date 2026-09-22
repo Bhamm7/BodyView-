@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { db, uid } from '@/db/db';
+import { db, removeRecord, uid } from '@/db/db';
 import type { Compound, CompoundCategory, DoseUnit, Route } from '@/db/types';
 import { DOSE_UNITS } from '@/lib/units';
 import { Field, NumberInput, Sheet, useToast } from './ui';
@@ -53,6 +53,8 @@ export function CompoundSheet({
   const [route, setRoute] = useState<Route | ''>('');
   const [color, setColor] = useState(PALETTE[0]);
   const [notes, setNotes] = useState('');
+  /** How much history points at this compound — null until counted. */
+  const [usage, setUsage] = useState<{ protocols: number; doses: number } | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -63,6 +65,27 @@ export function CompoundSheet({
     setRoute(compound?.route ?? '');
     setColor(compound?.color ?? PALETTE[Math.floor(Math.random() * PALETTE.length)]);
     setNotes(compound?.notes ?? '');
+  }, [open, compound]);
+
+  // A compound with protocols or logged doses behind it cannot simply vanish:
+  // deleting it would leave those records pointing at nothing. Counted here so
+  // the sheet can offer the honest choice — delete, or archive.
+  useEffect(() => {
+    let cancelled = false;
+    if (!open || !compound) {
+      setUsage(null);
+      return;
+    }
+    void (async () => {
+      const [protocols, doses] = await Promise.all([
+        db.protocols.where('compoundId').equals(compound.id).count(),
+        db.doses.where('compoundId').equals(compound.id).count(),
+      ]);
+      if (!cancelled) setUsage({ protocols, doses });
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [open, compound]);
 
   const save = async () => {
@@ -84,12 +107,29 @@ export function CompoundSheet({
     onClose();
   };
 
-  const archive = async () => {
+  const setArchived = async (archived: boolean) => {
     if (!compound) return;
-    await db.compounds.update(compound.id, { archived: true });
-    toast.show(`${compound.name} archived`);
+    await db.compounds.update(compound.id, { archived: archived || undefined });
+    toast.show(`${compound.name} ${archived ? 'archived' : 'restored'}`);
     onClose();
   };
+
+  /** Only offered when nothing references the compound — see the count above. */
+  const destroy = async () => {
+    if (!compound || !unused) return;
+    await removeRecord('compounds', compound.id);
+    toast.show(`${compound.name} deleted`);
+    onClose();
+  };
+
+  const unused = !!usage && usage.protocols === 0 && usage.doses === 0;
+  const usageNote = !compound
+    ? null
+    : usage == null
+      ? 'Checking what uses this compound…'
+      : unused
+        ? 'Nothing uses this compound, so it can be deleted outright.'
+        : `Used by ${usage.protocols} protocol${usage.protocols === 1 ? '' : 's'} and ${usage.doses} logged dose${usage.doses === 1 ? '' : 's'}. Archive hides it from the pickers and keeps that history intact.`;
 
   return (
     <Sheet
@@ -99,9 +139,15 @@ export function CompoundSheet({
       footer={
         <>
           {compound ? (
-            <button className="btn danger" onClick={archive}>
-              Archive
-            </button>
+            unused ? (
+              <button className="btn danger" onClick={destroy}>
+                Delete
+              </button>
+            ) : (
+              <button className="btn danger" onClick={() => setArchived(!compound.archived)}>
+                {compound.archived ? 'Restore' : 'Archive'}
+              </button>
+            )
           ) : (
             <button className="btn" onClick={onClose}>
               Cancel
@@ -113,6 +159,22 @@ export function CompoundSheet({
         </>
       }
     >
+      {compound && (
+        <div className="card" style={{ background: 'var(--surface-2)' }}>
+          <div className="small">{usageNote}</div>
+          <div className="row tight" style={{ marginTop: 'var(--sp-2)', flexWrap: 'wrap' }}>
+            <button className="btn sm" onClick={() => setArchived(!compound.archived)}>
+              {compound.archived ? 'Restore to library' : 'Archive'}
+            </button>
+            {unused && (
+              <button className="btn sm danger" onClick={destroy}>
+                Delete permanently
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <Field label="Name">
         <input
           className="input"

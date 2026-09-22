@@ -7,7 +7,7 @@ import { Card, EmptyState, Field, NumberInput, ProgressBar, Segmented, Sheet, us
 import { DoseChecklist } from '@/components/DoseChecklist';
 import { CATEGORY_ICONS, CATEGORY_LABELS, CompoundSheet } from '@/components/CompoundSheet';
 import { ProtocolSheet } from '@/components/ProtocolSheet';
-import { useCompoundMap, useCompounds, useProtocols } from '@/hooks/useData';
+import { useArchivedCompounds, useCompoundMap, useCompounds, useProtocols } from '@/hooks/useData';
 import { combineDateTime, formatDay, lastNDays, nowTime, relativeDay, today } from '@/lib/date';
 import { dose as formatDose, num, pluralize } from '@/lib/format';
 import { doseRate, protocolProgress, remainingLabel, scheduleLabel } from '@/lib/schedule';
@@ -35,6 +35,7 @@ export default function Cycles() {
   const protocols = useProtocols();
   const compounds = useCompounds();
   const compoundMap = useCompoundMap();
+  const archivedCompounds = useArchivedCompounds();
 
   const active = protocols.filter((p) => p.active);
   const finished = protocols.filter((p) => !p.active || (p.endDate && p.endDate < date));
@@ -69,7 +70,7 @@ export default function Cycles() {
               </button>
             }
           >
-            <DoseChecklist date={date} />
+            <DoseChecklist date={date} onEditProtocol={setEditProtocol} />
           </Card>
 
           {active.length > 0 && (
@@ -219,10 +220,32 @@ export default function Cycles() {
               })}
             </div>
           </Card>
+
+          {archivedCompounds.length > 0 && (
+            <Card title={`Archived · ${archivedCompounds.length}`}>
+              <div className="list">
+                {archivedCompounds.map((c) => (
+                  <button key={c.id} className="list-row" onClick={() => setEditCompound(c)}>
+                    <span className="lead" aria-hidden="true">
+                      {CATEGORY_ICONS[c.category]}
+                    </span>
+                    <span className="body">
+                      <span className="title">{c.name}</span>
+                      <span className="sub">{CATEGORY_LABELS[c.category]} · archived</span>
+                    </span>
+                    <span className="trail">
+                      <span className="badge">Restore</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
       )}
 
       <ProtocolSheet open={newProtocol} onClose={() => setNewProtocol(false)} />
+
       {editProtocol && (
         <ProtocolSheet protocol={editProtocol} open onClose={() => setEditProtocol(null)} />
       )}

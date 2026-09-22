@@ -28,6 +28,11 @@ export function useCompounds(): Compound[] {
   );
 }
 
+/** Archived compounds, so the library can offer them back rather than losing them. */
+export function useArchivedCompounds(): Compound[] {
+  return useLiveQuery(() => db.compounds.filter((c) => !!c.archived).sortBy('name'), [], []) ?? [];
+}
+
 /** Compound lookup by id, for rendering names and colours next to doses. */
 export function useCompoundMap(): Map<ID, Compound> {
   const all = useLiveQuery(() => db.compounds.toArray(), [], []) ?? [];
