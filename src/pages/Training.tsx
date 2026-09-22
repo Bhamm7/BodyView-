@@ -7,18 +7,11 @@ import { Page } from '@/components/Layout';
 import { Card, EmptyState, Field, Segmented, Sheet, StatTile, useToast } from '@/components/ui';
 import { BarSeries } from '@/components/charts';
 import { HBars } from '@/components/sparkline';
-import { useExerciseMap, useExercises, useOpenWorkout, useSettings } from '@/hooks/useData';
+import { useExerciseMap, useExercises, useOpenWorkout } from '@/hooks/useData';
 import { formatDay, fromISODate, lastNDays, nowISO, relativeDay, toISODate, today } from '@/lib/date';
 import { addDays } from 'date-fns';
 import { duration, num, pluralize } from '@/lib/format';
-import {
-  e1rm,
-  MUSCLE_LABELS,
-  setsByMuscle,
-  workingSets,
-  workoutDuration,
-  workoutVolume,
-} from '@/lib/training';
+import { e1rm, MUSCLE_LABELS, setsByMuscle, TRAINING_WEIGHT_UNIT, workingSets, workoutDuration, workoutVolume } from '@/lib/training';
 
 type Tab = 'sessions' | 'progress' | 'exercises';
 
@@ -133,7 +126,6 @@ export default function Training() {
 
 function SessionsTab({ workouts }: { workouts: Workout[] }) {
   const navigate = useNavigate();
-  const [settings] = useSettings();
   const allSets = useLiveQuery(() => db.sets.toArray(), [], []) ?? [];
 
   const byWorkout = useMemo(() => {
@@ -178,7 +170,7 @@ function SessionsTab({ workouts }: { workouts: Workout[] }) {
                 </span>
                 <span className="trail mono small">
                   {num(workoutVolume(sets), 0)}
-                  <span className="dim tiny"> {settings.weightUnit}</span>
+                  <span className="dim tiny"> {TRAINING_WEIGHT_UNIT}</span>
                 </span>
               </button>
             );
@@ -192,7 +184,6 @@ function SessionsTab({ workouts }: { workouts: Workout[] }) {
 /** Weekly volume, session count and per-muscle set distribution. */
 function ProgressTab() {
   const [weeks, setWeeks] = useState<'4' | '8' | '12'>('8');
-  const [settings] = useSettings();
   const exercises = useExerciseMap();
 
   const days = Number(weeks) * 7;
@@ -263,7 +254,7 @@ function ProgressTab() {
         <StatTile
           label="Total volume"
           value={num(totalVolume / 1000, 1)}
-          unit={`k ${settings.weightUnit}`}
+          unit={`k ${TRAINING_WEIGHT_UNIT}`}
           icon="📦"
           meta={pluralize(workingSets(windowSets).length, 'working set')}
         />
@@ -277,11 +268,11 @@ function ProgressTab() {
         </Card>
       ) : (
         <>
-          <Card title={`Weekly volume (${settings.weightUnit})`}>
+          <Card title={`Weekly volume (${TRAINING_WEIGHT_UNIT})`}>
             <BarSeries
               data={weekly}
               label="Volume"
-              unit={settings.weightUnit}
+              unit={TRAINING_WEIGHT_UNIT}
               color="var(--c-1)"
               labelFormatter={(l) => formatDay(l).replace(/^\w+ /, '')}
             />
@@ -303,7 +294,6 @@ function ProgressTab() {
 function ExercisesTab() {
   const navigate = useNavigate();
   const exercises = useExercises();
-  const [settings] = useSettings();
   const [query, setQuery] = useState('');
   const [creating, setCreating] = useState(false);
 
@@ -365,7 +355,7 @@ function ExercisesTab() {
                   {best ? (
                     <>
                       {num(best, 0)}
-                      <span className="dim tiny"> {settings.weightUnit} e1RM</span>
+                      <span className="dim tiny"> {TRAINING_WEIGHT_UNIT} e1RM</span>
                     </>
                   ) : (
                     <span className="dim tiny">—</span>

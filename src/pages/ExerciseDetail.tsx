@@ -5,16 +5,15 @@ import { db } from '@/db/db';
 import { Page } from '@/components/Layout';
 import { Card, EmptyState, StatTile } from '@/components/ui';
 import { TrendChart } from '@/components/charts';
-import { useSettings } from '@/hooks/useData';
+import {  } from '@/hooks/useData';
 import { formatDay } from '@/lib/date';
 import { num, pluralize } from '@/lib/format';
-import { e1rm, MUSCLE_LABELS, personalRecords, setLabel, workingSets } from '@/lib/training';
+import { e1rm, MUSCLE_LABELS, personalRecords, setLabel, TRAINING_WEIGHT_UNIT, workingSets } from '@/lib/training';
 
 /** Per-exercise history: personal records, estimated 1RM trend and every set. */
 export default function ExerciseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [settings] = useSettings();
 
   const exercise = useLiveQuery(() => (id ? db.exercises.get(id) : undefined), [id]);
   const sets =
@@ -92,21 +91,21 @@ export default function ExerciseDetail() {
             <StatTile
               label="Heaviest set"
               value={num(pr.topWeight, 1)}
-              unit={settings.weightUnit}
+              unit={TRAINING_WEIGHT_UNIT}
               icon="🏆"
               meta={`× ${pr.topWeightReps}${pr.topWeightDate ? ` · ${formatDay(pr.topWeightDate)}` : ''}`}
             />
             <StatTile
               label="Best e1RM"
               value={num(pr.bestE1rm, 1)}
-              unit={settings.weightUnit}
+              unit={TRAINING_WEIGHT_UNIT}
               icon="📈"
               meta={pr.bestE1rmDate ? formatDay(pr.bestE1rmDate) : undefined}
             />
             <StatTile
               label="Best session volume"
               value={num(pr.bestSessionVolume, 0)}
-              unit={settings.weightUnit}
+              unit={TRAINING_WEIGHT_UNIT}
               icon="📦"
               meta={pr.bestSessionVolumeDate ? formatDay(pr.bestSessionVolumeDate) : undefined}
             />
@@ -119,7 +118,7 @@ export default function ExerciseDetail() {
           </div>
 
           {series.length >= 2 && (
-            <Card title={`Estimated 1RM (${settings.weightUnit})`}>
+            <Card title={`Estimated 1RM (${TRAINING_WEIGHT_UNIT})`}>
               <TrendChart
                 series={[
                   {
@@ -127,7 +126,7 @@ export default function ExerciseDetail() {
                     label: 'Estimated 1RM',
                     color: 'var(--c-1)',
                     data: series,
-                    unit: settings.weightUnit,
+                    unit: TRAINING_WEIGHT_UNIT,
                     precision: 1,
                   },
                 ]}
@@ -150,7 +149,7 @@ export default function ExerciseDetail() {
                     <span className="sub">
                       {h.sets
                         .filter((s) => s.done)
-                        .map((s) => setLabel(s, exercise.kind, settings.weightUnit))
+                        .map((s) => setLabel(s, exercise.kind, TRAINING_WEIGHT_UNIT))
                         .join('  ·  ') || 'No completed sets'}
                     </span>
                   </span>

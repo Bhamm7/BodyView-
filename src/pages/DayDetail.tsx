@@ -12,7 +12,7 @@ import { formatDayLong, formatTime, relativeDay, shiftDate, today } from '@/lib/
 import { dose as formatDose, num, pluralize } from '@/lib/format';
 import { toDisplay, metricUnit } from '@/lib/metricUnits';
 import { totalMacros } from '@/lib/nutrition';
-import { workingSets, workoutVolume } from '@/lib/training';
+import { TRAINING_WEIGHT_UNIT, workingSets, workoutVolume } from '@/lib/training';
 
 /** Everything recorded on one day, and the doses still due. */
 export default function DayDetail() {
@@ -217,7 +217,7 @@ function DayBody({ date }: { date: ISODate }) {
                     <span className="title">{w.name}</span>
                     <span className="sub truncate">
                       {pluralize(workingSets(sets).length, 'set')} ·{' '}
-                      {num(workoutVolume(sets), 0)} {settings.weightUnit}
+                      {num(workoutVolume(sets), 0)} {TRAINING_WEIGHT_UNIT}
                       {top.length ? ` · ${top.join(', ')}` : ''}
                     </span>
                   </span>

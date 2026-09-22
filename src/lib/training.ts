@@ -1,3 +1,13 @@
+/**
+ * Training loads are always pounds.
+ *
+ * Set weights are stored exactly as they were typed — the bar is loaded in
+ * whatever the gym's plates are marked in, and converting that would only
+ * introduce rounding no one asked for. Body weight is separate: it is stored
+ * canonically and follows the unit chosen in Settings.
+ */
+export const TRAINING_WEIGHT_UNIT = 'lb';
+
 import type { Exercise, ISODate, SetLog, Workout } from '@/db/types';
 
 /** Epley estimated one-rep max. Reps above ~12 extrapolate poorly, so cap it. */

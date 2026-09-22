@@ -5,10 +5,10 @@ import { db, removeRecords, uid } from '@/db/db';
 import type { Exercise, SetLog } from '@/db/types';
 import { Page } from '@/components/Layout';
 import { Card, EmptyState, Field, Sheet, useConfirm, useToast } from '@/components/ui';
-import { useExerciseMap, useExercises, useSettings } from '@/hooks/useData';
+import { useExerciseMap, useExercises } from '@/hooks/useData';
 import { formatDay, nowISO } from '@/lib/date';
 import { duration, num, pluralize } from '@/lib/format';
-import { e1rm, MUSCLE_LABELS, workingSets, workoutVolume } from '@/lib/training';
+import { e1rm, MUSCLE_LABELS, TRAINING_WEIGHT_UNIT, workingSets, workoutVolume } from '@/lib/training';
 
 /**
  * The live session screen. Optimised for one-handed use between sets: large
@@ -20,7 +20,6 @@ export default function WorkoutSession() {
   const navigate = useNavigate();
   const toast = useToast();
   const { confirm, dialog } = useConfirm();
-  const [settings] = useSettings();
   const [picking, setPicking] = useState(false);
   const [restFrom, setRestFrom] = useState<number | null>(null);
 
@@ -110,7 +109,7 @@ export default function WorkoutSession() {
         </button>
         <span className="small dim">
           {formatDay(workout.date)} · {pluralize(done.length, 'set')} ·{' '}
-          {num(volume, 0)} {settings.weightUnit}
+          {num(volume, 0)} {TRAINING_WEIGHT_UNIT}
         </span>
       </div>
 
@@ -138,7 +137,7 @@ export default function WorkoutSession() {
             exercise={exercises.get(group.exerciseId)}
             workoutId={workout.id}
             allSets={allSets}
-            weightUnit={settings.weightUnit}
+            weightUnit={TRAINING_WEIGHT_UNIT}
             onRest={() => setRestFrom(Date.now())}
             onRemove={async () => {
               const ok = await confirm('Remove this exercise and its sets?', 'Remove');

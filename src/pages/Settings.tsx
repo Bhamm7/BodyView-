@@ -59,7 +59,7 @@ export default function SettingsPage() {
     <Page title="Settings">
       <Card title="Units">
         <div className="col">
-          <Field label="Body weight">
+          <Field label="Body weight" hint="Weigh-ins and body metrics. Training loads are always lb.">
             <Segmented
               value={settings.weightUnit}
               options={[
