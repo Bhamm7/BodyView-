@@ -32,8 +32,41 @@ function useTheme() {
   }, [settings.theme]);
 }
 
+/**
+ * iOS does not let a fixed element sit under the keyboard: it rides up with
+ * the keyboard tray and lands on top of the field being typed into. Hiding the
+ * tab bar while anything has focus gives the keyboard the bottom of the screen,
+ * which is what it wants anyway.
+ */
+function useKeyboardAwareChrome() {
+  useEffect(() => {
+    const isField = (target: EventTarget | null): boolean =>
+      target instanceof HTMLElement &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable);
+
+    const onFocusIn = (e: FocusEvent) => {
+      if (isField(e.target)) document.body.classList.add('keyboard-open');
+    };
+    const onFocusOut = (e: FocusEvent) => {
+      if (isField(e.target)) document.body.classList.remove('keyboard-open');
+    };
+
+    document.addEventListener('focusin', onFocusIn);
+    document.addEventListener('focusout', onFocusOut);
+    return () => {
+      document.removeEventListener('focusin', onFocusIn);
+      document.removeEventListener('focusout', onFocusOut);
+      document.body.classList.remove('keyboard-open');
+    };
+  }, []);
+}
+
 export function Layout() {
   useTheme();
+  useKeyboardAwareChrome();
   // Mounted once here so the whole app stays in step with the server.
   useAutoSync();
   const { pathname } = useLocation();

@@ -119,6 +119,25 @@ export function Field({
  * Numeric input that keeps an empty string while the user is mid-edit rather
  * than snapping to 0 — typing "1.5" over "70" should not fight the cursor.
  */
+/**
+ * A tap into a value field is almost always "replace this", not "edit this" —
+ * logging 225 over last week's 205 should not mean placing a caret first. So
+ * the whole value is selected on focus and the first keystroke overwrites it.
+ *
+ * The selection is deferred a frame: iOS places its own caret as part of
+ * handling the tap, and doing this synchronously loses to it.
+ */
+export function selectOnFocus(event: { currentTarget: HTMLInputElement }): void {
+  const el = event.currentTarget;
+  requestAnimationFrame(() => {
+    try {
+      el.select();
+    } catch {
+      /* some input types refuse selection; typing still works */
+    }
+  });
+}
+
 export function NumberInput({
   value,
   onChange,
@@ -180,6 +199,7 @@ export function NumberInput({
       placeholder={placeholder}
       autoFocus={autoFocus}
       aria-label={ariaLabel}
+      onFocus={selectOnFocus}
       onChange={(e) => commit(e.target.value)}
       onBlur={() => {
         if (draft.trim() === '') return;

@@ -4,7 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, removeRecords, uid } from '@/db/db';
 import type { Exercise, SetLog } from '@/db/types';
 import { Page } from '@/components/Layout';
-import { Card, EmptyState, Field, Sheet, useConfirm, useToast } from '@/components/ui';
+import { Card, EmptyState, Field, selectOnFocus, Sheet, useConfirm, useToast } from '@/components/ui';
 import { useExerciseMap, useExercises } from '@/hooks/useData';
 import { formatDay, nowISO } from '@/lib/date';
 import { duration, num, pluralize } from '@/lib/format';
@@ -223,7 +223,11 @@ function ExerciseBlock({
             <th style={{ width: 28 }}>#</th>
             <th className="num">{isCardio ? 'Min' : weightUnit}</th>
             <th className="num">{isCardio ? 'km' : 'Reps'}</th>
-            <th className="num" style={{ width: 56 }}>
+            <th
+              className="num"
+              style={{ width: 56 }}
+              title="Rate of perceived exertion: how hard the set felt, 1–10. 10 is nothing left, 8 is two reps short of failure."
+            >
               RPE
             </th>
             <th style={{ width: 44 }} />
@@ -381,6 +385,7 @@ function CellInput({
       placeholder={placeholder}
       step={step}
       style={{ minHeight: 40, padding: '6px 8px', textAlign: 'right', width: '100%' }}
+      onFocus={selectOnFocus}
       onChange={(e) => {
         const raw = e.target.value;
         setDraft(raw);

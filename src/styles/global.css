@@ -243,6 +243,16 @@ input, select, textarea { font: inherit; }
     calc(var(--sp-4) + var(--safe-left));
 }
 
+/* While a field is focused the keyboard owns the bottom of the screen, so the
+   tab bar steps aside rather than being shoved up above the keyboard tray. */
+body.keyboard-open .tabbar {
+  display: none;
+}
+
+body.keyboard-open .app-main {
+  padding-bottom: calc(var(--safe-bottom) + var(--sp-6));
+}
+
 /* Bottom tab bar — thumb-reachable, the primary nav on phones. */
 .tabbar {
   position: fixed;
