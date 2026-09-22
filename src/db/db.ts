@@ -13,6 +13,7 @@ import type {
   Protocol,
   SetLog,
   Settings,
+  TrainingPlan,
   Workout,
   WorkoutTemplate,
 } from './types';
@@ -37,6 +38,7 @@ export const SYNCED_COLLECTIONS = [
   'targets',
   'exercises',
   'templates',
+  'plans',
   'workouts',
   'sets',
   'settings',
@@ -62,6 +64,7 @@ class BodyViewDB extends Dexie {
   targets!: EntityTable<NutritionTarget, 'id'>;
   exercises!: EntityTable<Exercise, 'id'>;
   templates!: EntityTable<WorkoutTemplate, 'id'>;
+  plans!: EntityTable<TrainingPlan, 'id'>;
   workouts!: EntityTable<Workout, 'id'>;
   sets!: EntityTable<SetLog, 'id'>;
   settings!: EntityTable<Settings, 'id'>;
@@ -128,6 +131,12 @@ class BodyViewDB extends Dexie {
             });
         }
       });
+
+    // v3 adds saved training plans — templates arranged into a weekly split or
+    // a rotation. Purely additive, so no data migration is needed.
+    this.version(3).stores({
+      plans: 'id, name, active, updatedAt',
+    });
 
     this.installChangeTracking();
   }

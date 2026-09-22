@@ -313,6 +313,30 @@ export interface WorkoutTemplate {
   }>;
 }
 
+/**
+ * How a plan decides what to train next.
+ *
+ * `weekday` anchors sessions to days of the week — the usual shape when life
+ * runs on a weekly rhythm. `rotation` is an ordered cycle that advances only
+ * when a session is actually started, so a missed day delays the plan rather
+ * than skipping a session in it.
+ */
+export type PlanKind = 'weekday' | 'rotation';
+
+export interface TrainingPlan {
+  id: ID;
+  name: string;
+  kind: PlanKind;
+  /** weekday plans: 0 = Sunday .. 6 = Saturday. Days left out are rest days. */
+  days?: Array<{ day: number; templateId: ID }>;
+  /** rotation plans: template ids in order, repeating from the top. */
+  rotation?: ID[];
+  /** rotation plans: how many sessions in, so the next one is known. */
+  position?: number;
+  notes?: string;
+  active: boolean;
+}
+
 export interface Workout {
   id: ID;
   date: ISODate;

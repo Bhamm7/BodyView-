@@ -5,6 +5,7 @@ import { db, removeRecords, uid } from '@/db/db';
 import type { Exercise, SetLog } from '@/db/types';
 import { Page } from '@/components/Layout';
 import { Card, EmptyState, Field, selectOnFocus, Sheet, useConfirm, useToast } from '@/components/ui';
+import { TemplateSheet } from '@/components/TemplateSheet';
 import { useExerciseMap, useExercises } from '@/hooks/useData';
 import { formatDay, nowISO } from '@/lib/date';
 import { duration, num, pluralize } from '@/lib/format';
@@ -21,6 +22,7 @@ export default function WorkoutSession() {
   const toast = useToast();
   const { confirm, dialog } = useConfirm();
   const [picking, setPicking] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
   const [restFrom, setRestFrom] = useState<number | null>(null);
 
   const workout = useLiveQuery(() => (id ? db.workouts.get(id) : undefined), [id]);
@@ -44,6 +46,28 @@ export default function WorkoutSession() {
       .sort((a, b) => a.order - b.order)
       .map((g) => ({ ...g, sets: g.sets.sort((a, b) => a.setIndex - b.setIndex) }));
   }, [sets]);
+
+  /**
+   * Turns what is on screen into a reusable workout: the exercises in their
+   * current order, how many sets of each, and the heaviest weight logged as the
+   * starting target. Reps stay unset — they are what varies week to week.
+   *
+   * Declared above the "session not found" guard: every hook has to run on
+   * every render, and a memo after an early return is a crash waiting for the
+   * first render that takes it.
+   */
+  const templateDraft = useMemo(
+    () => ({
+      name: !workout || workout.name === 'Workout' ? '' : workout.name,
+      items: groups.map((group) => ({
+        exerciseId: group.exerciseId,
+        targetSets: group.sets.length,
+        targetWeight:
+          group.sets.reduce((best, set) => Math.max(best, set.weight ?? 0), 0) || undefined,
+      })),
+    }),
+    [groups, workout],
+  );
 
   const done = workingSets(sets);
   const volume = workoutVolume(sets);
@@ -103,6 +127,13 @@ export default function WorkoutSession() {
         )
       }
     >
+      {groups.length > 0 && (
+        <div className="row" style={{ justifyContent: 'flex-end', marginBottom: 'var(--sp-2)' }}>
+          <button className="btn ghost sm" onClick={() => setSavingTemplate(true)}>
+            Save as a workout
+          </button>
+        </div>
+      )}
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 'var(--sp-4)' }}>
         <button className="btn ghost sm" onClick={() => navigate('/training')}>
           ‹ Training
@@ -156,6 +187,13 @@ export default function WorkoutSession() {
 
       <ExercisePicker open={picking} onClose={() => setPicking(false)} onPick={addExercise} />
       {dialog}
+
+      <TemplateSheet
+        open={savingTemplate}
+        initial={templateDraft}
+        onClose={() => setSavingTemplate(false)}
+      />
+
     </Page>
   );
 }

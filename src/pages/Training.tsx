@@ -2,21 +2,25 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, uid } from '@/db/db';
-import type { Exercise, Workout, WorkoutTemplate } from '@/db/types';
+import type { Exercise, TrainingPlan, Workout, WorkoutTemplate } from '@/db/types';
 import { Page } from '@/components/Layout';
 import { Card, EmptyState, Field, Segmented, Sheet, StatTile, useToast } from '@/components/ui';
 import { BarSeries } from '@/components/charts';
 import { HBars } from '@/components/sparkline';
 import { useExerciseMap, useExercises, useOpenWorkout } from '@/hooks/useData';
+import { TemplateSheet } from '@/components/TemplateSheet';
+import { PlanSheet } from '@/components/PlanSheet';
+import { advanced, planSummary, plannedTemplateId } from '@/lib/plan';
 import { formatDay, fromISODate, lastNDays, nowISO, relativeDay, toISODate, today } from '@/lib/date';
 import { addDays } from 'date-fns';
 import { duration, num, pluralize } from '@/lib/format';
 import { e1rm, MUSCLE_LABELS, setsByMuscle, TRAINING_WEIGHT_UNIT, workingSets, workoutDuration, workoutVolume } from '@/lib/training';
 
-type Tab = 'sessions' | 'progress' | 'exercises';
+type Tab = 'sessions' | 'plan' | 'progress' | 'exercises';
 
 const TABS = [
   { value: 'sessions', label: 'Sessions' },
+  { value: 'plan', label: 'Plan' },
   { value: 'progress', label: 'Progress' },
   { value: 'exercises', label: 'Exercises' },
 ] as const;
@@ -32,8 +36,24 @@ export default function Training() {
   const workouts =
     useLiveQuery(() => db.workouts.reverse().sortBy('date').then((w) => w.slice(0, 60)), [], []) ?? [];
   const templates = useLiveQuery(() => db.templates.toArray(), [], []) ?? [];
+  const plans = useLiveQuery(() => db.plans.filter((p) => p.active).toArray(), [], []) ?? [];
 
-  const startWorkout = async (template?: WorkoutTemplate) => {
+  const templateMap = useMemo(() => new Map(templates.map((t) => [t.id, t])), [templates]);
+
+  /** What the active plans call for today, with the plan that called for it. */
+  const dueToday = useMemo(
+    () =>
+      plans
+        .map((plan) => {
+          const id = plannedTemplateId(plan, today());
+          const template = id ? templateMap.get(id) : undefined;
+          return template ? { plan, template } : null;
+        })
+        .filter((x): x is { plan: TrainingPlan; template: WorkoutTemplate } => x != null),
+    [plans, templateMap],
+  );
+
+  const startWorkout = async (template?: WorkoutTemplate, plan?: TrainingPlan) => {
     const id = uid();
     const workout: Workout = {
       id,
@@ -58,6 +78,12 @@ export default function Training() {
         })),
       );
       await db.sets.bulkAdd(rows);
+    }
+
+    // A rotation only moves when a session actually starts, so a missed day
+    // delays the plan rather than dropping a session out of it.
+    if (plan && plan.kind === 'rotation') {
+      await db.plans.update(plan.id, { position: advanced(plan) });
     }
 
     setStarting(false);
@@ -93,16 +119,50 @@ export default function Training() {
       )}
 
       {tab === 'sessions' && <SessionsTab workouts={workouts} />}
+      {tab === 'plan' && (
+        <PlanTab
+          plans={plans}
+          templates={templates}
+          templateMap={templateMap}
+          onStart={startWorkout}
+        />
+      )}
       {tab === 'progress' && <ProgressTab />}
       {tab === 'exercises' && <ExercisesTab />}
 
       <Sheet open={starting} title="Start a workout" onClose={() => setStarting(false)}>
+        {dueToday.length > 0 && (
+          <>
+            <div className="card-title">On the plan today</div>
+            <div className="list">
+              {dueToday.map(({ plan, template }) => (
+                <button
+                  key={plan.id}
+                  className="list-row"
+                  onClick={() => startWorkout(template, plan)}
+                >
+                  <span className="lead" aria-hidden="true">
+                    ⭐
+                  </span>
+                  <span className="body">
+                    <span className="title">{template.name}</span>
+                    <span className="sub">
+                      {plan.name} · {pluralize(template.items.length, 'exercise')}
+                    </span>
+                  </span>
+                  <span className="trail dim">›</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
         <button className="btn primary block lg" onClick={() => startWorkout()}>
           Empty workout
         </button>
         {templates.length > 0 && (
           <>
-            <div className="card-title">From a template</div>
+            <div className="card-title">Saved workouts</div>
             <div className="list">
               {templates.map((t) => (
                 <button key={t.id} className="list-row" onClick={() => startWorkout(t)}>
@@ -121,6 +181,127 @@ export default function Training() {
         )}
       </Sheet>
     </Page>
+  );
+}
+
+/** Saved workouts, and the plans that arrange them. */
+function PlanTab({
+  plans,
+  templates,
+  templateMap,
+  onStart,
+}: {
+  plans: TrainingPlan[];
+  templates: WorkoutTemplate[];
+  templateMap: Map<string, WorkoutTemplate>;
+  onStart: (template: WorkoutTemplate, plan?: TrainingPlan) => void;
+}) {
+  const [newTemplate, setNewTemplate] = useState(false);
+  const [editTemplate, setEditTemplate] = useState<WorkoutTemplate | null>(null);
+  const [newPlan, setNewPlan] = useState(false);
+  const [editPlan, setEditPlan] = useState<TrainingPlan | null>(null);
+  const exercises = useExerciseMap();
+
+  const date = today();
+
+  return (
+    <div style={{ marginTop: 'var(--sp-4)' }}>
+      <Card
+        title={`Saved workouts · ${templates.length}`}
+        action={
+          <button className="btn sm" onClick={() => setNewTemplate(true)}>
+            + Create
+          </button>
+        }
+      >
+        {templates.length === 0 ? (
+          <EmptyState icon="📋" title="Nothing saved yet">
+            Save a workout — "Chest day A" — and it becomes something you can start in one
+            tap, or drop into a plan.
+          </EmptyState>
+        ) : (
+          <div className="list">
+            {templates.map((t) => (
+              <div key={t.id} className="list-row">
+                <span className="lead" aria-hidden="true">
+                  📋
+                </span>
+                <button
+                  className="body"
+                  style={{ background: 'none', border: 'none', textAlign: 'left', padding: 0 }}
+                  onClick={() => setEditTemplate(t)}
+                >
+                  <span className="title">{t.name}</span>
+                  <span className="sub truncate">
+                    {pluralize(t.items.length, 'exercise')}
+                    {t.items.length > 0 ? ' · ' : ''}
+                    {t.items
+                      .map((i) => exercises.get(i.exerciseId)?.name)
+                      .filter(Boolean)
+                      .slice(0, 3)
+                      .join(', ')}
+                    {t.items.length > 3 ? '…' : ''}
+                  </span>
+                </button>
+                <button className="btn sm trail" onClick={() => onStart(t)}>
+                  Start
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <Card
+        title={`Plans · ${plans.length}`}
+        action={
+          <button className="btn sm" onClick={() => setNewPlan(true)} disabled={templates.length === 0}>
+            + Plan
+          </button>
+        }
+      >
+        {plans.length === 0 ? (
+          <EmptyState icon="🗓️" title="No plan yet">
+            A plan arranges saved workouts — either onto days of the week, or into a rotation
+            that advances each time you train.
+          </EmptyState>
+        ) : (
+          <div className="list">
+            {plans.map((plan) => {
+              const dueId = plannedTemplateId(plan, date);
+              const due = dueId ? templateMap.get(dueId) : undefined;
+              return (
+                <div key={plan.id} className="list-row">
+                  <span className="lead" aria-hidden="true">
+                    {plan.kind === 'weekday' ? '🗓️' : '🔁'}
+                  </span>
+                  <button
+                    className="body"
+                    style={{ background: 'none', border: 'none', textAlign: 'left', padding: 0 }}
+                    onClick={() => setEditPlan(plan)}
+                  >
+                    <span className="title">{plan.name}</span>
+                    <span className="sub truncate">{planSummary(plan, templateMap)}</span>
+                  </button>
+                  {due && (
+                    <button className="btn sm trail" onClick={() => onStart(due, plan)}>
+                      {plan.kind === 'weekday' ? 'Today' : 'Next'}: {due.name}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      <TemplateSheet open={newTemplate} onClose={() => setNewTemplate(false)} />
+      {editTemplate && (
+        <TemplateSheet template={editTemplate} open onClose={() => setEditTemplate(null)} />
+      )}
+      <PlanSheet open={newPlan} onClose={() => setNewPlan(false)} />
+      {editPlan && <PlanSheet plan={editPlan} open onClose={() => setEditPlan(null)} />}
+    </div>
   );
 }
 

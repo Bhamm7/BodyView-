@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, uid } from '@/db/db';
-import type { MetricKey } from '@/db/types';
+import type { MetricKey, TrainingPlan, WorkoutTemplate } from '@/db/types';
 import { METRICS, metricDef } from '@/db/metrics';
 import { Page } from '@/components/Layout';
 import { Card, EmptyState, ProgressBar, Sheet, StatTile } from '@/components/ui';
@@ -25,6 +25,7 @@ import { metricUnit, toDisplay } from '@/lib/metricUnits';
 import { dailyValues, latestEntry, trendTone } from '@/lib/metricSeries';
 import { project, STATUS_LABEL } from '@/lib/inventory';
 import { dueDoses } from '@/lib/doses';
+import { advanced, plannedTemplateId } from '@/lib/plan';
 import { totalMacros } from '@/lib/nutrition';
 
 /** The landing screen: what is due today and where every area stands. */
@@ -49,6 +50,8 @@ export default function Dashboard() {
   const todaysDoses = useLiveQuery(() => db.doses.where('date').equals(date).toArray(), [date], []) ?? [];
   const recentWorkouts =
     useLiveQuery(() => db.workouts.reverse().sortBy('date').then((w) => w.slice(0, 5)), [], []) ?? [];
+  const plans = useLiveQuery(() => db.plans.filter((p) => p.active).toArray(), [], []) ?? [];
+  const templates = useLiveQuery(() => db.templates.toArray(), [], []) ?? [];
 
   const due = useMemo(
     () => dueDoses(date, activeProtocols, todaysDoses),
@@ -72,6 +75,17 @@ export default function Dashboard() {
     : (['weight', 'bloodPressure', 'restingHr'] as MetricKey[]);
 
   const lastWorkout = recentWorkouts.find((w) => w.finishedAt);
+
+  /** The first active plan with something due today, if any. */
+  const planned = useMemo(() => {
+    const byId = new Map(templates.map((t) => [t.id, t]));
+    for (const plan of plans) {
+      const id = plannedTemplateId(plan, date);
+      const template = id ? byId.get(id) : undefined;
+      if (template) return { plan, template };
+    }
+    return null;
+  }, [plans, templates, date]);
 
   return (
     <Page
@@ -239,9 +253,30 @@ export default function Dashboard() {
           </button>
         ) : (
           <>
-            <button className="btn primary block lg" onClick={() => startQuickWorkout(navigate)}>
-              Start a workout
-            </button>
+            {planned ? (
+              <>
+                <button
+                  className="btn primary block lg"
+                  onClick={() => startPlanned(navigate, planned.template, planned.plan)}
+                >
+                  Start “{planned.template.name}”
+                </button>
+                <p className="tiny dim" style={{ marginTop: 'var(--sp-2)', marginBottom: 0 }}>
+                  {planned.plan.name} · {planned.plan.kind === 'weekday' ? 'on today' : 'next up'}
+                </p>
+                <button
+                  className="btn block"
+                  style={{ marginTop: 'var(--sp-3)' }}
+                  onClick={() => startQuickWorkout(navigate)}
+                >
+                  Something else
+                </button>
+              </>
+            ) : (
+              <button className="btn primary block lg" onClick={() => startQuickWorkout(navigate)}>
+                Start a workout
+              </button>
+            )}
             {lastWorkout ? (
               <p className="tiny dim" style={{ marginTop: 'var(--sp-3)', marginBottom: 0 }}>
                 Last session: {lastWorkout.name} · {agoLabel(lastWorkout.date)}
@@ -290,6 +325,37 @@ export default function Dashboard() {
       {logging && <MetricEntrySheet metric={logging} open onClose={() => setLogging(null)} />}
     </Page>
   );
+}
+
+/** Starts the session a plan calls for, pre-filled and with the rotation moved on. */
+async function startPlanned(
+  navigate: (path: string) => void,
+  template: WorkoutTemplate,
+  plan: TrainingPlan,
+) {
+  const id = uid();
+  await db.workouts.add({
+    id,
+    date: today(),
+    name: template.name,
+    templateId: template.id,
+    startedAt: nowISO(),
+  });
+  await db.sets.bulkAdd(
+    template.items.flatMap((item, order) =>
+      Array.from({ length: Math.max(1, item.targetSets) }, (_, setIndex) => ({
+        id: uid(),
+        workoutId: id,
+        exerciseId: item.exerciseId,
+        order,
+        setIndex,
+        done: false,
+        weight: item.targetWeight,
+      })),
+    ),
+  );
+  if (plan.kind === 'rotation') await db.plans.update(plan.id, { position: advanced(plan) });
+  navigate(`/workout/${id}`);
 }
 
 /** Creates an empty session and jumps straight into it. */

@@ -34,6 +34,7 @@ export const COLLECTIONS = [
   'targets',
   'exercises',
   'templates',
+  'plans',
   'workouts',
   'sets',
   'settings',
