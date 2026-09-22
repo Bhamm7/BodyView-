@@ -3,7 +3,14 @@ import { db, removeRecord, uid } from '@/db/db';
 import type { DoseUnit, Protocol, Schedule, ScheduleKind } from '@/db/types';
 import { DOSE_UNITS } from '@/lib/units';
 import { shiftDate, today } from '@/lib/date';
-import { doseRate, scheduleLabel, WEEKDAY_LABELS } from '@/lib/schedule';
+import {
+  type DoseBasis,
+  doseRate,
+  dosesPerWeek,
+  perDoseFromBasis,
+  scheduleLabel,
+  WEEKDAY_LABELS,
+} from '@/lib/schedule';
 import { num } from '@/lib/format';
 import { useCompounds } from '@/hooks/useData';
 import { Field, NumberInput, Segmented, Sheet, Stepper, useToast } from './ui';
@@ -15,6 +22,23 @@ const KINDS = [
 ] as const;
 
 const LENGTH_PRESETS = [4, 6, 8, 10, 12, 16];
+
+/**
+ * What the amount in the dose field means. Injectables are usually prescribed
+ * and discussed as a weekly total, orals and supplements per dose or per day,
+ * so the entry has to support all three rather than assuming one.
+ */
+const BASES = [
+  { value: 'dose', label: 'Per dose' },
+  { value: 'day', label: 'Per day' },
+  { value: 'week', label: 'Per week' },
+] as const;
+
+const BASIS_LABEL: Record<DoseBasis, string> = {
+  dose: 'Amount per dose',
+  day: 'Amount per day',
+  week: 'Amount per week',
+};
 
 /** Creates or edits a dosing protocol — the schedule that drives a cycle. */
 export function ProtocolSheet({
@@ -34,6 +58,8 @@ export function ProtocolSheet({
   const [compoundId, setCompoundId] = useState('');
   const [dose, setDose] = useState<number | null>(null);
   const [unit, setUnit] = useState<DoseUnit>('mg');
+  const [basis, setBasis] = useState<DoseBasis>('dose');
+  const [scheduleTouched, setScheduleTouched] = useState(false);
   const [kind, setKind] = useState<ScheduleKind>('everyNDays');
   const [intervalDays, setIntervalDays] = useState(1);
   const [days, setDays] = useState<number[]>([1, 4]);
@@ -51,6 +77,8 @@ export function ProtocolSheet({
     const seedCompound = compounds.find((c) => c.id === seedId);
     setDose(protocol?.dose ?? seedCompound?.defaultDose ?? null);
     setUnit(protocol?.unit ?? seedCompound?.defaultUnit ?? 'mg');
+    setBasis('dose');
+    setScheduleTouched(false);
     setKind(protocol?.schedule.kind ?? 'everyNDays');
     setIntervalDays(protocol?.schedule.intervalDays ?? 1);
     setDays(protocol?.schedule.days ?? [1, 4]);
@@ -61,6 +89,24 @@ export function ProtocolSheet({
     setEndDate(protocol?.endDate ?? '');
     setNotes(protocol?.notes ?? '');
   }, [open, protocol, presetCompoundId, compounds]);
+
+  /**
+   * Picking "per week" on an untouched form also assumes a weekly injection,
+   * which is what a weekly total normally implies; "per dose" and "per day"
+   * assume a daily pattern. Once the schedule has been set by hand it is left
+   * alone — an inference that overwrites a deliberate choice is a bug.
+   */
+  const chooseBasis = (next: DoseBasis) => {
+    setBasis(next);
+    if (scheduleTouched || protocol) return;
+    setKind('everyNDays');
+    setIntervalDays(next === 'week' ? 7 : 1);
+  };
+
+  const editSchedule = <T,>(apply: (value: T) => void) => (value: T) => {
+    setScheduleTouched(true);
+    apply(value);
+  };
 
   // Adopt the compound's own defaults when the user switches compound.
   const pickCompound = (id: string) => {
@@ -83,15 +129,23 @@ export function ProtocolSheet({
     [kind, intervalDays, days, daysOn, daysOff, timesPerDay],
   );
 
-  const rate = dose != null ? doseRate({ dose, unit, schedule } as Protocol) : null;
-  const valid = !!compoundId && dose != null && dose > 0 && (kind !== 'weekdays' || days.length > 0);
+  /** The amount as typed, converted to the per-administration dose we store. */
+  const perDose = dose != null ? perDoseFromBasis(dose, basis, schedule) : null;
+  const rate = perDose != null ? doseRate({ dose: perDose, unit, schedule } as Protocol) : null;
+  const perWeek = dosesPerWeek(schedule);
+  const valid =
+    !!compoundId &&
+    perDose != null &&
+    perDose > 0 &&
+    Number.isFinite(perDose) &&
+    (kind !== 'weekdays' || days.length > 0);
 
   const save = async () => {
     if (!valid) return;
     const record: Protocol = {
       id: protocol?.id ?? uid(),
       compoundId,
-      dose: dose!,
+      dose: perDose!,
       unit,
       schedule,
       startDate,
@@ -112,8 +166,10 @@ export function ProtocolSheet({
     onClose();
   };
 
-  const toggleDay = (d: number) =>
+  const toggleDay = (d: number) => {
+    setScheduleTouched(true);
     setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()));
+  };
 
   return (
     <Sheet
@@ -148,8 +204,12 @@ export function ProtocolSheet({
         </select>
       </Field>
 
+      <Field label="Dose is entered" hint="Pick how you think about this compound's dose">
+        <Segmented value={basis} options={BASES} onChange={chooseBasis} block label="Dose basis" />
+      </Field>
+
       <div className="grid grid-2">
-        <Field label="Dose">
+        <Field label={BASIS_LABEL[basis]}>
           <NumberInput value={dose} onChange={setDose} step={0.5} min={0} big />
         </Field>
         <Field label="Unit">
@@ -164,14 +224,20 @@ export function ProtocolSheet({
       </div>
 
       <Field label="Schedule">
-        <Segmented value={kind} options={KINDS} onChange={setKind} block label="Schedule type" />
+        <Segmented
+          value={kind}
+          options={KINDS}
+          onChange={editSchedule(setKind)}
+          block
+          label="Schedule type"
+        />
       </Field>
 
       {kind === 'everyNDays' && (
         <Field label="Every" hint="1 = daily, 2 = every other day">
           <Stepper
             value={intervalDays}
-            onChange={(v) => setIntervalDays(Math.max(1, v ?? 1))}
+            onChange={editSchedule((v: number | null) => setIntervalDays(Math.max(1, v ?? 1)))}
             min={1}
             max={30}
             suffix="days"
@@ -201,10 +267,20 @@ export function ProtocolSheet({
       {kind === 'cycling' && (
         <div className="grid grid-2">
           <Field label="Days on">
-            <Stepper value={daysOn} onChange={(v) => setDaysOn(Math.max(1, v ?? 1))} min={1} max={90} />
+            <Stepper
+              value={daysOn}
+              onChange={editSchedule((v: number | null) => setDaysOn(Math.max(1, v ?? 1)))}
+              min={1}
+              max={90}
+            />
           </Field>
           <Field label="Days off">
-            <Stepper value={daysOff} onChange={(v) => setDaysOff(Math.max(0, v ?? 0))} min={0} max={90} />
+            <Stepper
+              value={daysOff}
+              onChange={editSchedule((v: number | null) => setDaysOff(Math.max(0, v ?? 0)))}
+              min={0}
+              max={90}
+            />
           </Field>
         </div>
       )}
@@ -212,7 +288,7 @@ export function ProtocolSheet({
       <Field label="Doses per dosing day">
         <Stepper
           value={timesPerDay}
-          onChange={(v) => setTimesPerDay(Math.max(1, v ?? 1))}
+          onChange={editSchedule((v: number | null) => setTimesPerDay(Math.max(1, v ?? 1)))}
           min={1}
           max={6}
           aria-label="Doses per day"
@@ -267,9 +343,17 @@ export function ProtocolSheet({
           {scheduleLabel(schedule)} ·{' '}
           <strong className="mono">{rate ? rate.label : '—'}</strong>
         </div>
+        {rate && perDose != null && (
+          <div className="small" style={{ marginTop: 4 }}>
+            <strong className="mono">
+              {num(perDose, 2)} {unit === 'iu' ? 'IU' : unit}
+            </strong>{' '}
+            per dose, {num(perWeek, 2)}× a week
+          </div>
+        )}
         <div className="tiny dim" style={{ marginTop: 4 }}>
           {rate
-            ? `That is ${num(rate.perWeek, 2)} ${unit === 'iu' ? 'IU' : unit} a week, ${num(rate.perDay, 2)} ${unit === 'iu' ? 'IU' : unit} a day — also used to project when your stock runs out.`
+            ? `${num(rate.perWeek, 2)} ${unit === 'iu' ? 'IU' : unit} a week · ${num(rate.perDay, 2)} ${unit === 'iu' ? 'IU' : unit} a day — also used to project when your stock runs out.`
             : 'Enter a dose to see the weekly and daily rate.'}
         </div>
       </div>

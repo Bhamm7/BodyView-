@@ -61,6 +61,41 @@ export function dailyAverageDose(protocol: Protocol): number {
   }
 }
 
+/**
+ * How many administrations a week the pattern calls for — scheduled days
+ * multiplied by the doses taken on each of them.
+ */
+export function dosesPerWeek(schedule: Schedule): number {
+  const times = Math.max(1, schedule.timesPerDay);
+  switch (schedule.kind) {
+    case 'everyNDays':
+      return (7 / Math.max(1, schedule.intervalDays ?? 1)) * times;
+    case 'weekdays':
+      return (schedule.days ?? []).length * times;
+    case 'cycling': {
+      const on = Math.max(1, schedule.daysOn ?? 1);
+      const off = Math.max(0, schedule.daysOff ?? 0);
+      return ((7 * on) / (on + off)) * times;
+    }
+  }
+}
+
+/** What an entered amount means: one administration, a day's worth, a week's. */
+export type DoseBasis = 'dose' | 'day' | 'week';
+
+/**
+ * Converts an amount entered on any basis into the per-administration dose the
+ * protocol stores. "160 mg a week, split Mon and Thu" is stored as 80 mg, so
+ * the checklist, the stock burn-down and the adherence maths all keep working
+ * on one number without knowing how it was typed in.
+ */
+export function perDoseFromBasis(amount: number, basis: DoseBasis, schedule: Schedule): number {
+  if (basis === 'dose') return amount;
+  const perWeek = dosesPerWeek(schedule);
+  if (!Number.isFinite(perWeek) || perWeek <= 0) return amount;
+  return (basis === 'week' ? amount : amount * 7) / perWeek;
+}
+
 /** True when the pattern puts a dose on every calendar day in the window. */
 export function isDaily(schedule: Schedule): boolean {
   switch (schedule.kind) {

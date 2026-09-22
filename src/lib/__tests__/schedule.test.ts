@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { Protocol, Schedule } from '@/db/types';
-import { dailyAverageDose, doseRate, isDaily, isScheduledOn, scheduleLabel } from '../schedule';
+import {
+  dailyAverageDose,
+  doseRate,
+  dosesPerWeek,
+  isDaily,
+  isScheduledOn,
+  perDoseFromBasis,
+  scheduleLabel,
+} from '../schedule';
 import { dateRange } from '../date';
 
 const protocol = (schedule: Schedule, over: Partial<Protocol> = {}): Protocol => ({
@@ -168,5 +176,44 @@ describe('doseRate', () => {
   it('agrees with the daily average used for stock projections', () => {
     const p = protocol({ kind: 'weekdays', days: [1, 3, 5], timesPerDay: 1 });
     assert.equal(doseRate(p).perDay, dailyAverageDose(p));
+  });
+});
+
+describe('dose basis', () => {
+  it('counts administrations a week for each schedule shape', () => {
+    assert.equal(dosesPerWeek({ kind: 'everyNDays', intervalDays: 1, timesPerDay: 1 }), 7);
+    assert.equal(dosesPerWeek({ kind: 'everyNDays', intervalDays: 7, timesPerDay: 1 }), 1);
+    assert.equal(dosesPerWeek({ kind: 'weekdays', days: [1, 4], timesPerDay: 1 }), 2);
+    assert.equal(dosesPerWeek({ kind: 'everyNDays', intervalDays: 1, timesPerDay: 3 }), 21);
+    assert.equal(dosesPerWeek({ kind: 'cycling', daysOn: 2, daysOff: 5, timesPerDay: 1 }), 2);
+  });
+
+  it('splits a weekly total across the scheduled days', () => {
+    const twice: Schedule = { kind: 'weekdays', days: [1, 4], timesPerDay: 1 };
+    assert.equal(perDoseFromBasis(160, 'week', twice), 80);
+  });
+
+  it('keeps a weekly total intact on a once-a-week schedule', () => {
+    const weekly: Schedule = { kind: 'everyNDays', intervalDays: 7, timesPerDay: 1 };
+    assert.equal(perDoseFromBasis(160, 'week', weekly), 160);
+  });
+
+  it('leaves a per-dose amount alone', () => {
+    const daily: Schedule = { kind: 'everyNDays', intervalDays: 1, timesPerDay: 1 };
+    assert.equal(perDoseFromBasis(160, 'dose', daily), 160);
+  });
+
+  it('spreads a daily total over a less frequent schedule', () => {
+    const eod: Schedule = { kind: 'everyNDays', intervalDays: 2, timesPerDay: 1 };
+    // 10 mg a day, dosed every other day, is 20 mg each time.
+    assert.equal(perDoseFromBasis(10, 'day', eod), 20);
+  });
+
+  it('round-trips: what is entered is what the rate reports back', () => {
+    const schedule: Schedule = { kind: 'weekdays', days: [1, 4], timesPerDay: 1 };
+    const stored = perDoseFromBasis(160, 'week', schedule);
+    const rate = doseRate(protocol(schedule, { dose: stored }));
+    assert.equal(rate.perWeek, 160);
+    assert.equal(rate.label, '160 mg/week');
   });
 });
