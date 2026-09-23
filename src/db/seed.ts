@@ -27,7 +27,7 @@ function seedId(kind: string, name: string): string {
  * Bumped whenever rows are added to a catalogue below. Devices that seeded at
  * an older version pick up only the newer rows — see {@link topUpCatalogue}.
  */
-export const CATALOGUE_VERSION = 2;
+export const CATALOGUE_VERSION = 3;
 
 /** A seed row plus the catalogue version that introduced it (1 when absent). */
 type SeedCompound = Omit<Compound, 'id'> & { addedIn?: number };
@@ -169,20 +169,23 @@ const COMPOUND_SEED: SeedCompound[] = [
   { name: 'Iron (Bisglycinate)', category: 'vitamin', defaultDose: 25, defaultUnit: 'mg', route: 'oral', color: '#fecaca', addedIn: 2 },
 ];
 
+type SeedExercise = Omit<Exercise, 'id'> & { addedIn?: number };
+
 const EX = (
   name: string,
   muscle: Exercise['muscle'],
   equipment: string,
-  opts: { kind?: Exercise['kind']; primary?: boolean } = {},
-): Omit<Exercise, 'id'> => ({
+  opts: { kind?: Exercise['kind']; primary?: boolean; addedIn?: number } = {},
+): SeedExercise => ({
   name,
   muscle,
   equipment,
   kind: opts.kind ?? 'strength',
   primary: opts.primary,
+  addedIn: opts.addedIn,
 });
 
-const EXERCISE_SEED: Array<Omit<Exercise, 'id'>> = [
+const EXERCISE_SEED: SeedExercise[] = [
   EX('Barbell Back Squat', 'quads', 'Barbell', { primary: true }),
   EX('Front Squat', 'quads', 'Barbell'),
   EX('Leg Press', 'quads', 'Machine'),
@@ -235,6 +238,87 @@ const EXERCISE_SEED: Array<Omit<Exercise, 'id'>> = [
   EX('Rowing Machine', 'cardio', 'Machine', { kind: 'cardio' }),
   EX('Stair Climber', 'cardio', 'Machine', { kind: 'cardio' }),
   EX('Assault Bike', 'cardio', 'Machine', { kind: 'cardio' }),
+
+  // ---- Added in catalogue v3 ----
+  EX('Hack Squat', 'quads', 'Machine', { addedIn: 3 }),
+  EX('Pendulum Squat', 'quads', 'Machine', { addedIn: 3 }),
+  EX('Smith Machine Squat', 'quads', 'Smith machine', { addedIn: 3 }),
+  EX('Goblet Squat', 'quads', 'Dumbbell', { addedIn: 3 }),
+  EX('Walking Lunge', 'quads', 'Dumbbell', { addedIn: 3 }),
+  EX('Reverse Lunge', 'quads', 'Barbell', { addedIn: 3 }),
+  EX('Step-Up', 'quads', 'Dumbbell', { addedIn: 3 }),
+  EX('Sissy Squat', 'quads', 'Bodyweight', { kind: 'bodyweight', addedIn: 3 }),
+  EX('Belt Squat', 'quads', 'Machine', { addedIn: 3 }),
+  EX('Trap Bar Deadlift', 'quads', 'Trap bar', { addedIn: 3 }),
+  EX('Sumo Deadlift', 'hamstrings', 'Barbell', { addedIn: 3 }),
+  EX('Stiff-Leg Deadlift', 'hamstrings', 'Barbell', { addedIn: 3 }),
+  EX('Good Morning', 'hamstrings', 'Barbell', { addedIn: 3 }),
+  EX('Nordic Curl', 'hamstrings', 'Bodyweight', { kind: 'bodyweight', addedIn: 3 }),
+  EX('Glute Ham Raise', 'hamstrings', 'Machine', { addedIn: 3 }),
+  EX('Cable Pull-Through', 'glutes', 'Cable', { addedIn: 3 }),
+  EX('Glute Kickback', 'glutes', 'Cable', { addedIn: 3 }),
+  EX('Hip Abduction', 'glutes', 'Machine', { addedIn: 3 }),
+  EX('Single-Leg Calf Raise', 'calves', 'Dumbbell', { addedIn: 3 }),
+  EX('Leg Press Calf Raise', 'calves', 'Machine', { addedIn: 3 }),
+  EX('Decline Barbell Press', 'chest', 'Barbell', { addedIn: 3 }),
+  EX('Smith Machine Incline Press', 'chest', 'Smith machine', { addedIn: 3 }),
+  EX('Machine Chest Press', 'chest', 'Machine', { addedIn: 3 }),
+  EX('Low-to-High Cable Fly', 'chest', 'Cable', { addedIn: 3 }),
+  EX('High-to-Low Cable Fly', 'chest', 'Cable', { addedIn: 3 }),
+  EX('Dumbbell Pullover', 'chest', 'Dumbbell', { addedIn: 3 }),
+  EX('Push-Up', 'chest', 'Bodyweight', { kind: 'bodyweight', addedIn: 3 }),
+  EX('Weighted Dip', 'chest', 'Bodyweight', { kind: 'bodyweight', addedIn: 3 }),
+  EX('Pendlay Row', 'back', 'Barbell', { addedIn: 3 }),
+  EX('T-Bar Row', 'back', 'Barbell', { addedIn: 3 }),
+  EX('Single-Arm Dumbbell Row', 'back', 'Dumbbell', { addedIn: 3 }),
+  EX('Meadows Row', 'back', 'Barbell', { addedIn: 3 }),
+  EX('Neutral-Grip Pulldown', 'back', 'Cable', { addedIn: 3 }),
+  EX('Single-Arm Lat Pulldown', 'back', 'Cable', { addedIn: 3 }),
+  EX('Machine Row', 'back', 'Machine', { addedIn: 3 }),
+  EX('Inverted Row', 'back', 'Bodyweight', { kind: 'bodyweight', addedIn: 3 }),
+  EX('Rack Pull', 'back', 'Barbell', { addedIn: 3 }),
+  EX('Barbell Shrug', 'back', 'Barbell', { addedIn: 3 }),
+  EX('Dumbbell Shrug', 'back', 'Dumbbell', { addedIn: 3 }),
+  EX('Back Extension', 'back', 'Machine', { addedIn: 3 }),
+  EX('Arnold Press', 'shoulders', 'Dumbbell', { addedIn: 3 }),
+  EX('Machine Shoulder Press', 'shoulders', 'Machine', { addedIn: 3 }),
+  EX('Push Press', 'shoulders', 'Barbell', { addedIn: 3 }),
+  EX('Upright Row', 'shoulders', 'Cable', { addedIn: 3 }),
+  EX('Reverse Pec Deck', 'shoulders', 'Machine', { addedIn: 3 }),
+  EX('Front Raise', 'shoulders', 'Dumbbell', { addedIn: 3 }),
+  EX('Landmine Press', 'shoulders', 'Barbell', { addedIn: 3 }),
+  EX('Cable Curl', 'biceps', 'Cable', { addedIn: 3 }),
+  EX('Concentration Curl', 'biceps', 'Dumbbell', { addedIn: 3 }),
+  EX('Spider Curl', 'biceps', 'Dumbbell', { addedIn: 3 }),
+  EX('Reverse Curl', 'biceps', 'Barbell', { addedIn: 3 }),
+  EX('Bayesian Cable Curl', 'biceps', 'Cable', { addedIn: 3 }),
+  EX('EZ-Bar Curl', 'biceps', 'EZ bar', { addedIn: 3 }),
+  EX('Rope Pushdown', 'triceps', 'Cable', { addedIn: 3 }),
+  EX('Single-Arm Cable Extension', 'triceps', 'Cable', { addedIn: 3 }),
+  EX('Dumbbell Overhead Extension', 'triceps', 'Dumbbell', { addedIn: 3 }),
+  EX('JM Press', 'triceps', 'Barbell', { addedIn: 3 }),
+  EX('Bench Dip', 'triceps', 'Bodyweight', { kind: 'bodyweight', addedIn: 3 }),
+  EX('Reverse Wrist Curl', 'forearms', 'Dumbbell', { addedIn: 3 }),
+  EX('Dead Hang', 'forearms', 'Bodyweight', { kind: 'timed', addedIn: 3 }),
+  EX('Side Plank', 'core', 'Bodyweight', { kind: 'timed', addedIn: 3 }),
+  EX('Russian Twist', 'core', 'Plate', { addedIn: 3 }),
+  EX('Pallof Press', 'core', 'Cable', { addedIn: 3 }),
+  EX('Decline Sit-Up', 'core', 'Bodyweight', { kind: 'bodyweight', addedIn: 3 }),
+  EX('Machine Crunch', 'core', 'Machine', { addedIn: 3 }),
+  EX('Power Clean', 'fullBody', 'Barbell', { addedIn: 3 }),
+  EX('Hang Clean', 'fullBody', 'Barbell', { addedIn: 3 }),
+  EX('Clean and Jerk', 'fullBody', 'Barbell', { addedIn: 3 }),
+  EX('Snatch', 'fullBody', 'Barbell', { addedIn: 3 }),
+  EX('Kettlebell Swing', 'fullBody', 'Kettlebell', { addedIn: 3 }),
+  EX('Thruster', 'fullBody', 'Barbell', { addedIn: 3 }),
+  EX('Sled Push', 'fullBody', 'Sled', { kind: 'timed', addedIn: 3 }),
+  EX('Battle Ropes', 'fullBody', 'Ropes', { kind: 'timed', addedIn: 3 }),
+  EX('Burpee', 'fullBody', 'Bodyweight', { kind: 'bodyweight', addedIn: 3 }),
+  EX('Incline Treadmill Walk', 'cardio', 'Treadmill', { kind: 'cardio', addedIn: 3 }),
+  EX('Elliptical', 'cardio', 'Machine', { kind: 'cardio', addedIn: 3 }),
+  EX('Jump Rope', 'cardio', 'Rope', { kind: 'cardio', addedIn: 3 }),
+  EX('Outdoor Run', 'cardio', 'None', { kind: 'cardio', addedIn: 3 }),
+  EX('Cycling', 'cardio', 'Bike', { kind: 'cardio', addedIn: 3 }),
 ];
 
 const F = (
@@ -318,9 +402,7 @@ export async function seedIfEmpty(): Promise<void> {
         await db.compounds.bulkPut(COMPOUND_SEED.map(toCompound));
       }
       if ((await db.exercises.count()) === 0) {
-        await db.exercises.bulkPut(
-          EXERCISE_SEED.map((e) => ({ ...e, id: seedId('exercise', e.name) })),
-        );
+        await db.exercises.bulkPut(EXERCISE_SEED.map(toExercise));
       }
       if ((await db.foods.count()) === 0) {
         await db.foods.bulkPut(FOOD_SEED.map((f) => ({ ...f, id: seedId('food', f.name) })));
@@ -336,6 +418,7 @@ export async function seedIfEmpty(): Promise<void> {
     ...settings,
     seededAt: new Date().toISOString(),
     compoundCatalogueVersion: CATALOGUE_VERSION,
+    exerciseCatalogueVersion: CATALOGUE_VERSION,
   });
 }
 
@@ -343,6 +426,11 @@ export async function seedIfEmpty(): Promise<void> {
 function toCompound(seed: SeedCompound): Compound {
   const { addedIn: _addedIn, ...rest } = seed;
   return { ...rest, id: seedId('compound', seed.name) };
+}
+
+function toExercise(seed: SeedExercise): Exercise {
+  const { addedIn: _addedIn, ...rest } = seed;
+  return { ...rest, id: seedId('exercise', seed.name) };
 }
 
 /**
@@ -359,15 +447,42 @@ export async function topUpCatalogue(): Promise<void> {
   const settings = await getSettings();
   if (!settings.seededAt) return;
 
-  const from = settings.compoundCatalogueVersion ?? 1;
-  if (from >= CATALOGUE_VERSION) return;
+  const added = {
+    compoundCatalogueVersion: await topUp(
+      db.compounds,
+      COMPOUND_SEED,
+      toCompound,
+      settings.compoundCatalogueVersion ?? 1,
+    ),
+    exerciseCatalogueVersion: await topUp(
+      db.exercises,
+      EXERCISE_SEED,
+      toExercise,
+      settings.exerciseCatalogueVersion ?? 1,
+    ),
+  };
 
-  const candidates = COMPOUND_SEED.filter((c) => (c.addedIn ?? 1) > from).map(toCompound);
-  if (candidates.length > 0) {
-    const existing = await db.compounds.bulkGet(candidates.map((c) => c.id));
-    const missing = candidates.filter((_, i) => existing[i] == null);
-    if (missing.length > 0) await db.compounds.bulkPut(missing);
+  if (added.compoundCatalogueVersion || added.exerciseCatalogueVersion) {
+    await saveSettings({
+      compoundCatalogueVersion: CATALOGUE_VERSION,
+      exerciseCatalogueVersion: CATALOGUE_VERSION,
+    });
   }
+}
 
-  await saveSettings({ compoundCatalogueVersion: CATALOGUE_VERSION });
+/** Adds the rows introduced since `from`, leaving anything already there alone. */
+async function topUp<Seed extends { addedIn?: number }, Row extends { id: string }>(
+  table: { bulkGet: (ids: string[]) => Promise<Array<Row | undefined>>; bulkPut: (rows: Row[]) => Promise<unknown> },
+  seeds: Seed[],
+  build: (seed: Seed) => Row,
+  from: number,
+): Promise<boolean> {
+  if (from >= CATALOGUE_VERSION) return false;
+  const candidates = seeds.filter((s) => (s.addedIn ?? 1) > from).map(build);
+  if (candidates.length === 0) return true;
+
+  const existing = await table.bulkGet(candidates.map((c) => c.id));
+  const missing = candidates.filter((_, i) => existing[i] == null);
+  if (missing.length > 0) await table.bulkPut(missing);
+  return true;
 }

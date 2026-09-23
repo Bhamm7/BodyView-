@@ -293,6 +293,12 @@ export interface Exercise {
   kind: ExerciseKind;
   muscle: MuscleGroup;
   equipment?: string;
+  /**
+   * A small JPEG data URL — the machine, the setup, the pin position. Stored
+   * inline so it syncs and backs up with everything else; see lib/photo.ts for
+   * why it is shrunk before it gets here.
+   */
+  photo?: string;
   /** Tracked as a main lift: surfaced on the PR board and strength charts. */
   primary?: boolean;
   notes?: string;
@@ -392,4 +398,5 @@ export interface Settings {
   seededAt?: ISODateTime;
   /** Highest seed-catalogue version applied here; drives catalogue top-ups. */
   compoundCatalogueVersion?: number;
+  exerciseCatalogueVersion?: number;
 }

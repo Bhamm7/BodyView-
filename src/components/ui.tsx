@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { toStoredPhoto } from '@/lib/photo';
 
 /* ------------------------------------------------------------------ Sheet */
 
@@ -119,6 +120,102 @@ export function Field({
  * Numeric input that keeps an empty string while the user is mid-edit rather
  * than snapping to 0 — typing "1.5" over "70" should not fight the cursor.
  */
+/**
+ * Camera-or-library picker for a single small photo.
+ *
+ * Two inputs rather than one: `capture` asks the phone to open the camera
+ * straight away, which is what you want standing in front of a machine, but it
+ * also removes the option of an existing picture, so the library stays
+ * reachable beside it. On a desktop the camera button is simply another file
+ * dialog, so it is hidden there.
+ */
+export function PhotoField({
+  value,
+  onChange,
+  label = 'Photo',
+  hint,
+}: {
+  value?: string;
+  onChange: (photo: string | undefined) => void;
+  label?: string;
+  hint?: string;
+}) {
+  const toast = useToast();
+  const camera = useRef<HTMLInputElement>(null);
+  const library = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  const accept = async (file?: File) => {
+    if (!file) return;
+    setBusy(true);
+    try {
+      onChange(await toStoredPhoto(file));
+    } catch (err) {
+      toast.show(err instanceof Error ? err.message : 'That photo could not be added.');
+    } finally {
+      setBusy(false);
+      // Clearing lets the same file be chosen twice in a row.
+      if (camera.current) camera.current.value = '';
+      if (library.current) library.current.value = '';
+    }
+  };
+
+  return (
+    <Field label={label} hint={hint}>
+      {value && (
+        <img
+          src={value}
+          alt=""
+          style={{
+            width: '100%',
+            maxHeight: 220,
+            objectFit: 'cover',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--border)',
+            marginBottom: 'var(--sp-2)',
+          }}
+        />
+      )}
+      <div className="row tight wrap">
+        {isTouch() && (
+          <button className="btn sm" disabled={busy} onClick={() => camera.current?.click()}>
+            📷 {value ? 'Retake' : 'Take photo'}
+          </button>
+        )}
+        <button className="btn sm" disabled={busy} onClick={() => library.current?.click()}>
+          {value ? 'Choose another' : 'Choose a photo'}
+        </button>
+        {value && (
+          <button className="btn sm ghost" disabled={busy} onClick={() => onChange(undefined)}>
+            Remove
+          </button>
+        )}
+        {busy && <span className="tiny dim">Shrinking…</span>}
+      </div>
+      <input
+        ref={camera}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={(e) => accept(e.target.files?.[0])}
+      />
+      <input
+        ref={library}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => accept(e.target.files?.[0])}
+      />
+    </Field>
+  );
+}
+
+/** True on a device driven by a finger, where an opening keyboard costs half the screen. */
+export function isTouch(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches === true;
+}
+
 /**
  * A tap into a value field is almost always "replace this", not "edit this" —
  * logging 225 over last week's 205 should not mean placing a caret first. So

@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, uid } from '@/db/db';
-import type { Exercise, TrainingPlan, Workout, WorkoutTemplate } from '@/db/types';
+import type { TrainingPlan, Workout, WorkoutTemplate } from '@/db/types';
 import { Page } from '@/components/Layout';
-import { Card, EmptyState, Field, Segmented, Sheet, StatTile, useToast } from '@/components/ui';
+import { Card, EmptyState, Segmented, Sheet, StatTile, useToast } from '@/components/ui';
 import { BarSeries } from '@/components/charts';
 import { HBars } from '@/components/sparkline';
 import { useExerciseMap, useExercises, useOpenWorkout } from '@/hooks/useData';
 import { TemplateSheet } from '@/components/TemplateSheet';
+import { ExerciseSheet, ExerciseThumb } from '@/components/ExerciseSheet';
 import { PlanSheet } from '@/components/PlanSheet';
 import { advanced, planSummary, plannedTemplateId } from '@/lib/plan';
 import { formatDay, fromISODate, lastNDays, nowISO, relativeDay, toISODate, today } from '@/lib/date';
@@ -523,6 +524,7 @@ function ExercisesTab() {
                 className="list-row"
                 onClick={() => navigate(`/training/exercise/${ex.id}`)}
               >
+                <ExerciseThumb exercise={ex} />
                 <span className="body">
                   <span className="title truncate">
                     {ex.name} {ex.primary ? '⭐' : ''}
@@ -548,89 +550,16 @@ function ExercisesTab() {
         </div>
       </Card>
 
-      <ExerciseSheet open={creating} onClose={() => setCreating(false)} />
+      <ExerciseSheet
+        open={creating}
+        initialName={query.trim()}
+        onClose={() => setCreating(false)}
+      />
     </div>
   );
 }
 
 /** Creates a custom exercise. */
-function ExerciseSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const toast = useToast();
-  const [name, setName] = useState('');
-  const [muscle, setMuscle] = useState<Exercise['muscle']>('chest');
-  const [kind, setKind] = useState<Exercise['kind']>('strength');
-  const [equipment, setEquipment] = useState('');
-
-  const save = async () => {
-    if (!name.trim()) return;
-    await db.exercises.add({
-      id: uid(),
-      name: name.trim(),
-      muscle,
-      kind,
-      equipment: equipment.trim() || undefined,
-    });
-    toast.show(`${name.trim()} added`);
-    setName('');
-    setEquipment('');
-    onClose();
-  };
-
-  return (
-    <Sheet
-      open={open}
-      title="New exercise"
-      onClose={onClose}
-      footer={
-        <>
-          <button className="btn" onClick={onClose}>
-            Cancel
-          </button>
-          <button className="btn primary" onClick={save} disabled={!name.trim()}>
-            Save
-          </button>
-        </>
-      }
-    >
-      <Field label="Name">
-        <input className="input" value={name} autoFocus onChange={(e) => setName(e.target.value)} />
-      </Field>
-      <Field label="Muscle group">
-        <select
-          className="select"
-          value={muscle}
-          onChange={(e) => setMuscle(e.target.value as Exercise['muscle'])}
-        >
-          {Object.entries(MUSCLE_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </Field>
-      <Field label="Type">
-        <select
-          className="select"
-          value={kind}
-          onChange={(e) => setKind(e.target.value as Exercise['kind'])}
-        >
-          <option value="strength">Strength</option>
-          <option value="bodyweight">Bodyweight</option>
-          <option value="cardio">Cardio</option>
-          <option value="timed">Timed</option>
-        </select>
-      </Field>
-      <Field label="Equipment">
-        <input
-          className="input"
-          value={equipment}
-          placeholder="Barbell, dumbbell, machine…"
-          onChange={(e) => setEquipment(e.target.value)}
-        />
-      </Field>
-    </Sheet>
-  );
-}
 
 /** Monday of the week containing `date`, as a local ISO date. */
 function weekStart(date: string): string {

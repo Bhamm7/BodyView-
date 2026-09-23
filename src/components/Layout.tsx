@@ -64,9 +64,50 @@ function useKeyboardAwareChrome() {
   }, []);
 }
 
+/**
+ * Publishes the visual viewport as CSS variables.
+ *
+ * A `position: fixed` element is laid out against the *layout* viewport, which
+ * iOS does not shrink when the keyboard appears — so a sheet pinned to the
+ * bottom ends up behind the keyboard, or below the screen entirely, which is
+ * exactly what a search field with autofocus produces. The visual viewport is
+ * the part actually on screen, so sheets are sized and positioned against it
+ * instead.
+ *
+ * Browsers without the API (and desktop, where none of this bites) keep the
+ * fallbacks in the stylesheet.
+ */
+function useVisualViewportVars() {
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const apply = () => {
+      const root = document.documentElement;
+      // How much of the layout viewport is hidden below the visible area:
+      // the keyboard, essentially.
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      root.style.setProperty('--vv-height', `${Math.round(vv.height)}px`);
+      root.style.setProperty('--vv-bottom-inset', `${Math.round(inset)}px`);
+    };
+
+    apply();
+    vv.addEventListener('resize', apply);
+    vv.addEventListener('scroll', apply);
+    return () => {
+      vv.removeEventListener('resize', apply);
+      vv.removeEventListener('scroll', apply);
+      const root = document.documentElement;
+      root.style.removeProperty('--vv-height');
+      root.style.removeProperty('--vv-bottom-inset');
+    };
+  }, []);
+}
+
 export function Layout() {
   useTheme();
   useKeyboardAwareChrome();
+  useVisualViewportVars();
   // Mounted once here so the whole app stays in step with the server.
   useAutoSync();
   const { pathname } = useLocation();

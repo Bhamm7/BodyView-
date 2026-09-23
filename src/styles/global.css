@@ -803,8 +803,11 @@ button.list-row:active { background: var(--surface-2); }
   z-index: 51;
   left: 0;
   right: 0;
-  bottom: 0;
-  max-height: 92dvh;
+  /* Sits on top of the keyboard rather than behind it — see
+     useVisualViewportVars. Both variables fall back to zero and 92dvh, which
+     is the old behaviour, on browsers without a visual viewport. */
+  bottom: var(--vv-bottom-inset, 0px);
+  max-height: min(92dvh, calc(var(--vv-height, 92dvh) - var(--sp-6)));
   display: flex;
   flex-direction: column;
   background: var(--surface);
@@ -851,6 +854,13 @@ button.list-row:active { background: var(--surface-2); }
   border-radius: var(--radius-full);
   background: var(--border-strong);
   margin: var(--sp-2) auto 0;
+}
+
+/* The keyboard already takes the bottom of the screen, so the sheet's own
+   safe-area padding would only add dead space under the fold. */
+body.keyboard-open .sheet-body,
+body.keyboard-open .sheet-foot {
+  padding-bottom: var(--sp-3);
 }
 
 @media (min-width: 900px) {

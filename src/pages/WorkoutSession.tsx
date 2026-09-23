@@ -4,8 +4,9 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, removeRecords, uid } from '@/db/db';
 import type { Exercise, SetLog } from '@/db/types';
 import { Page } from '@/components/Layout';
-import { Card, EmptyState, Field, selectOnFocus, Sheet, useConfirm, useToast } from '@/components/ui';
+import { Card, EmptyState, Field, isTouch, selectOnFocus, Sheet, useConfirm, useToast } from '@/components/ui';
 import { TemplateSheet } from '@/components/TemplateSheet';
+import { ExerciseSheet, ExerciseThumb } from '@/components/ExerciseSheet';
 import { useExerciseMap, useExercises } from '@/hooks/useData';
 import { formatDay, nowISO } from '@/lib/date';
 import { duration, num, pluralize } from '@/lib/format';
@@ -476,6 +477,7 @@ function ExercisePicker({
 }) {
   const exercises = useExercises();
   const [query, setQuery] = useState('');
+  const [creating, setCreating] = useState(false);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -489,7 +491,9 @@ function ExercisePicker({
         <input
           className="input"
           value={query}
-          autoFocus
+          // Not on a phone: the keyboard would cover the list the moment it
+          // opens, and the first thing most people want is to look, not type.
+          autoFocus={!isTouch()}
           placeholder="Bench, squat, curl…"
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -497,6 +501,7 @@ function ExercisePicker({
       <div className="list">
         {results.slice(0, 80).map((ex) => (
           <button key={ex.id} className="list-row" onClick={() => onPick(ex)}>
+            <ExerciseThumb exercise={ex} />
             <span className="body">
               <span className="title truncate">{ex.name}</span>
               <span className="sub">
@@ -508,6 +513,21 @@ function ExercisePicker({
           </button>
         ))}
       </div>
+
+      {/* Whatever was searched for and not found is usually the thing to add. */}
+      <button className="btn block" onClick={() => setCreating(true)}>
+        {query.trim() ? `+ New exercise “${query.trim()}”` : '+ New exercise'}
+      </button>
+
+      <ExerciseSheet
+        open={creating}
+        initialName={query.trim()}
+        onClose={() => setCreating(false)}
+        onSaved={(exercise) => {
+          setCreating(false);
+          onPick(exercise);
+        }}
+      />
     </Sheet>
   );
 }

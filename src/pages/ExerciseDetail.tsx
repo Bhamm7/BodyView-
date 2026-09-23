@@ -1,11 +1,11 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
 import { Page } from '@/components/Layout';
 import { Card, EmptyState, StatTile } from '@/components/ui';
 import { TrendChart } from '@/components/charts';
-import {  } from '@/hooks/useData';
+import { ExerciseSheet } from '@/components/ExerciseSheet';
 import { formatDay } from '@/lib/date';
 import { num, pluralize } from '@/lib/format';
 import { e1rm, MUSCLE_LABELS, personalRecords, setLabel, TRAINING_WEIGHT_UNIT, workingSets } from '@/lib/training';
@@ -14,6 +14,7 @@ import { e1rm, MUSCLE_LABELS, personalRecords, setLabel, TRAINING_WEIGHT_UNIT, w
 export default function ExerciseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [editing, setEditing] = useState(false);
 
   const exercise = useLiveQuery(() => (id ? db.exercises.get(id) : undefined), [id]);
   const sets =
@@ -68,7 +69,14 @@ export default function ExerciseDetail() {
   }
 
   return (
-    <Page title={exercise.name}>
+    <Page
+      title={exercise.name}
+      actions={
+        <button className="btn sm" onClick={() => setEditing(true)}>
+          Edit
+        </button>
+      }
+    >
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 'var(--sp-4)' }}>
         <button className="btn ghost sm" onClick={() => navigate('/training')}>
           ‹ Training
@@ -78,6 +86,39 @@ export default function ExerciseDetail() {
           {exercise.equipment ? ` · ${exercise.equipment}` : ''}
         </span>
       </div>
+
+      {exercise.photo ? (
+        <img
+          src={exercise.photo}
+          alt={`${exercise.name} setup`}
+          style={{
+            width: '100%',
+            maxHeight: 260,
+            objectFit: 'cover',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--border)',
+            marginBottom: 'var(--sp-4)',
+          }}
+        />
+      ) : (
+        <button
+          className="btn block"
+          style={{ marginBottom: 'var(--sp-4)' }}
+          onClick={() => setEditing(true)}
+        >
+          📷 Add a photo of the setup
+        </button>
+      )}
+
+      <ExerciseSheet
+        exercise={exercise}
+        open={editing}
+        onClose={() => setEditing(false)}
+        onSaved={(saved) => {
+          // Deleting from the sheet leaves this page pointing at nothing.
+          if (saved.archived) navigate('/training');
+        }}
+      />
 
       {!pr || pr.totalSets === 0 ? (
         <Card>
