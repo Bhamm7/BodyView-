@@ -9,9 +9,9 @@
 import {
   applyChange,
   changesSince,
-  COLLECTIONS,
+  collections,
   counts,
-  isCollection,
+  ensureCollection,
   pruneTombstones,
 } from './db.mjs';
 
@@ -70,7 +70,7 @@ function pull(db, since) {
   let maxSeen = since;
   let total = 0;
 
-  for (const collection of COLLECTIONS) {
+  for (const collection of collections(db)) {
     const rows = changesSince(db, collection, since, PAGE + 1);
     const truncated = rows.length > PAGE;
     const page = truncated ? rows.slice(0, PAGE) : rows;
@@ -98,7 +98,10 @@ function push(db, incoming, clock) {
   db.exec('BEGIN IMMEDIATE');
   try {
     for (const [collection, rows] of Object.entries(incoming)) {
-      if (!isCollection(collection) || !Array.isArray(rows)) {
+      // A collection this server has not seen before is made rather than
+      // refused: the app is the schema's author, and a new feature should not
+      // need the service restarted before its data is allowed through.
+      if (!Array.isArray(rows) || !ensureCollection(db, collection)) {
         rejected += Array.isArray(rows) ? rows.length : 1;
         continue;
       }
@@ -191,7 +194,7 @@ export function createApi({ db, clock, token }) {
 
       if (pathname === '/api/export' && req.method === 'GET') {
         const tables = {};
-        for (const collection of COLLECTIONS) {
+        for (const collection of collections(db)) {
           tables[collection] = changesSince(db, collection, 0, Number.MAX_SAFE_INTEGER)
             .filter((row) => !row.deleted)
             .map((row) => row.data);

@@ -337,6 +337,20 @@ more privilege than this needs, so the agent is the better default.
 `cron`/`launchd` entry can do it unattended, though on a personal app there's
 something to be said for updating it when you feel like it instead.
 
+Most changes need nothing of you at all:
+
+- **Front-end changes** are live as soon as `dist/` is rebuilt. The server
+  reads static files from disk per request, so there is nothing cached to
+  clear and nothing to restart.
+- **Server changes** restart the service themselves. The process watches its
+  own directory and exits when a `.mjs` file there changes; `KeepAlive` starts
+  it again a moment later, on the new code. Set `BODYVIEW_WATCH=0` to turn that
+  off, e.g. when running the server by hand.
+- **New kinds of data** need no migration. The app owns the schema: when a
+  device syncs a collection the server has never seen, its table is created on
+  the spot. Names must be plain identifiers (`^[a-z][A-Za-z0-9]{0,31}$`) since
+  they end up in SQL, and anything else is refused.
+
 ## Backups
 
 Everything now lives in one SQLite file, so backing that file up covers all your

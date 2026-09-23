@@ -3,7 +3,17 @@ import { describe, it, beforeEach } from 'node:test';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { rmSync, mkdtempSync } from 'node:fs';
-import { applyChange, changesSince, counts, createClock, openDatabase, pruneTombstones } from '../db.mjs';
+import {
+  applyChange,
+  changesSince,
+  collections,
+  counts,
+  createClock,
+  ensureCollection,
+  isCollection,
+  openDatabase,
+  pruneTombstones,
+} from '../db.mjs';
 
 let db;
 let clock;
@@ -105,5 +115,71 @@ describe('pruneTombstones', () => {
     assert.ok(ids.includes('keep'));
     assert.ok(ids.includes('new'));
     assert.ok(!ids.includes('old'));
+  });
+});
+
+describe('collections', () => {
+  it('lists the seeded tables and not the bookkeeping ones', () => {
+    const names = collections(db);
+    assert.ok(names.includes('workouts'));
+    assert.ok(names.includes('metrics'));
+    assert.equal(names.includes('_meta'), false);
+    assert.equal(
+      names.some((n) => n.startsWith('sqlite_')),
+      false,
+    );
+  });
+
+  it('creates a collection the server has never heard of', () => {
+    assert.equal(collections(db).includes('somethingNew'), false);
+    assert.equal(ensureCollection(db, 'somethingNew'), true);
+    assert.ok(collections(db).includes('somethingNew'));
+
+    const stamp = clock();
+    assert.equal(
+      applyChange(db, 'somethingNew', { id: 'a', updatedAt: 1, data: { id: 'a' } }, stamp),
+      true,
+    );
+    assert.deepEqual(
+      changesSince(db, 'somethingNew', 0, 10).map((r) => r.id),
+      ['a'],
+    );
+  });
+
+  it('is idempotent, so every push can call it', () => {
+    ensureCollection(db, 'twice');
+    const stamp = clock();
+    applyChange(db, 'twice', { id: 'a', updatedAt: 1, data: { id: 'a' } }, stamp);
+    ensureCollection(db, 'twice');
+    assert.equal(changesSince(db, 'twice', 0, 10).length, 1, 'the existing row survived');
+  });
+
+  it('refuses a name that is not a plain identifier', () => {
+    for (const name of [
+      'evil"; DROP TABLE workouts; --',
+      '_meta',
+      'sqlite_master',
+      'Capitalised',
+      'has space',
+      '',
+      'a'.repeat(33),
+    ]) {
+      assert.equal(isCollection(name), false, `${name} should be refused`);
+      assert.equal(ensureCollection(db, name), false, `${name} should not be created`);
+    }
+    assert.ok(collections(db).includes('workouts'), 'nothing was dropped');
+  });
+
+  it('counts a dynamic collection like any other', () => {
+    ensureCollection(db, 'plans');
+    applyChange(db, 'plans', { id: 'p1', updatedAt: 1, data: { id: 'p1' } }, clock());
+    assert.equal(counts(db).plans, 1);
+  });
+
+  it('starts the clock above a dynamic collection\'s newest row', () => {
+    ensureCollection(db, 'plans');
+    const high = clock() + 5_000;
+    applyChange(db, 'plans', { id: 'p1', updatedAt: 1, data: { id: 'p1' } }, high);
+    assert.ok(createClock(db)() > high, 'a reopened server keeps issuing fresh cursors');
   });
 });

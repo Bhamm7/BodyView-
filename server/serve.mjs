@@ -23,7 +23,7 @@
  * disable the service worker.
  */
 import { createServer } from 'node:http';
-import { createReadStream } from 'node:fs';
+import { createReadStream, watch } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -174,11 +174,49 @@ server.listen(PORT, HOST, () => {
   if (ALLOW_ORIGIN) console.log(`  cors     ${ALLOW_ORIGIN}`);
 });
 
+/**
+ * Restarts when the server's own code changes.
+ *
+ * The service is kept alive by launchd (`KeepAlive`), so exiting *is* the
+ * restart: launchd starts a fresh process a moment later, running the new
+ * code. Without this, deploying a server change means someone has to be at the
+ * Mac to run `launchctl kickstart`, which is exactly the kind of errand that
+ * gets forgotten until sync mysteriously does not work.
+ *
+ * Static files are not watched — they are read from disk per request, so a
+ * rebuilt `dist/` is live the moment it lands.
+ *
+ * Set BODYVIEW_WATCH=0 to run without this, e.g. when running by hand.
+ */
+function watchForChanges() {
+  if (process.env.BODYVIEW_WATCH === '0') return;
+  let pending;
+  try {
+    watch(HERE, (_event, file) => {
+      if (!file || !file.endsWith('.mjs')) return;
+      clearTimeout(pending);
+      // Editors save in bursts; wait for the burst to finish before exiting.
+      pending = setTimeout(() => {
+        console.log(`${file} changed — restarting`);
+        shutdown();
+      }, 750);
+    });
+  } catch (err) {
+    console.warn(`not watching for code changes: ${err.message}`);
+  }
+}
+
+/** Closes in-flight requests, then goes. Forced after a grace period. */
+function shutdown() {
+  server.close(() => {
+    db.close();
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(0), 3000).unref();
+}
+
+watchForChanges();
+
 for (const signal of ['SIGINT', 'SIGTERM']) {
-  process.on(signal, () =>
-    server.close(() => {
-      db.close();
-      process.exit(0);
-    }),
-  );
+  process.on(signal, shutdown);
 }

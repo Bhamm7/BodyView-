@@ -20,7 +20,13 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-/** Must stay in step with the Dexie table names in src/db/db.ts. */
+/**
+ * Created when the database is opened, so a fresh install has every table the
+ * current app uses. It is a starting point, not the whole truth: a client that
+ * syncs a collection this list has never heard of gets the table made for it on
+ * the spot (see {@link ensureCollection}), because the alternative is a server
+ * that has to be restarted every time the app grows a feature.
+ */
 export const COLLECTIONS = [
   'metrics',
   'compounds',
@@ -40,8 +46,53 @@ export const COLLECTIONS = [
   'settings',
 ];
 
-const COLLECTION_SET = new Set(COLLECTIONS);
-export const isCollection = (name) => COLLECTION_SET.has(name);
+/**
+ * Collection names are interpolated into SQL — they cannot be bound as
+ * parameters — so what counts as a name is defined narrowly and checked here
+ * rather than trusted from the request body.
+ */
+const COLLECTION_NAME = /^[a-z][A-Za-z0-9]{0,31}$/;
+
+export const isCollection = (name) => typeof name === 'string' && COLLECTION_NAME.test(name);
+
+const DDL = (name) => [
+  `CREATE TABLE IF NOT EXISTS "${name}" (
+     id                TEXT PRIMARY KEY,
+     updated_at        INTEGER NOT NULL,
+     client_updated_at INTEGER NOT NULL,
+     deleted           INTEGER NOT NULL DEFAULT 0,
+     data              TEXT NOT NULL
+   )`,
+  `CREATE INDEX IF NOT EXISTS "${name}_updated_at" ON "${name}" (updated_at)`,
+];
+
+/**
+ * Makes sure a collection's table exists, creating it if this is the first the
+ * server has heard of it. Idempotent, and cheap enough to call on every push.
+ */
+export function ensureCollection(db, name) {
+  if (!isCollection(name)) return false;
+  for (const sql of DDL(name)) db.exec(sql);
+  return true;
+}
+
+/**
+ * Every collection table in the database — the seeded ones plus any a client
+ * has introduced since. Bookkeeping tables (`_meta`) and SQLite's own are not
+ * collections and stay out.
+ */
+export function collections(db) {
+  return db
+    .prepare(
+      `SELECT name FROM sqlite_master
+        WHERE type = 'table'
+          AND name NOT LIKE '\\_%' ESCAPE '\\'
+          AND name NOT LIKE 'sqlite_%'
+        ORDER BY name`,
+    )
+    .all()
+    .map((row) => row.name);
+}
 
 export function openDatabase(file) {
   mkdirSync(dirname(file), { recursive: true });
@@ -52,18 +103,7 @@ export function openDatabase(file) {
   db.exec('PRAGMA synchronous = NORMAL');
   db.exec('PRAGMA foreign_keys = ON');
 
-  for (const name of COLLECTIONS) {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS "${name}" (
-        id                TEXT PRIMARY KEY,
-        updated_at        INTEGER NOT NULL,
-        client_updated_at INTEGER NOT NULL,
-        deleted           INTEGER NOT NULL DEFAULT 0,
-        data              TEXT NOT NULL
-      )
-    `);
-    db.exec(`CREATE INDEX IF NOT EXISTS "${name}_updated_at" ON "${name}" (updated_at)`);
-  }
+  for (const name of COLLECTIONS) ensureCollection(db, name);
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS _meta (
@@ -200,7 +240,10 @@ function createViews(db) {
  */
 export function createClock(db) {
   let last = 0;
-  for (const name of COLLECTIONS) {
+  // Every table, not just the seeded ones: a cursor that started below a
+  // dynamic collection's newest row would hand out values a client has already
+  // seen, and the rows in between would never be pulled again.
+  for (const name of collections(db)) {
     const row = db.prepare(`SELECT MAX(updated_at) AS m FROM "${name}"`).get();
     if (row?.m && row.m > last) last = row.m;
   }
@@ -262,7 +305,7 @@ export function applyChange(db, collection, change, now) {
 
 export function counts(db) {
   const out = {};
-  for (const name of COLLECTIONS) {
+  for (const name of collections(db)) {
     const row = db.prepare(`SELECT COUNT(*) AS n FROM "${name}" WHERE deleted = 0`).get();
     out[name] = row?.n ?? 0;
   }
@@ -273,7 +316,7 @@ export function counts(db) {
 export function pruneTombstones(db, olderThanMs) {
   const cutoff = Date.now() - olderThanMs;
   let removed = 0;
-  for (const name of COLLECTIONS) {
+  for (const name of collections(db)) {
     const res = db
       .prepare(`DELETE FROM "${name}" WHERE deleted = 1 AND updated_at < ?`)
       .run(cutoff);
