@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { toStoredPhoto } from '@/lib/photo';
+import { lockScroll } from '@/lib/scrollLock';
 
 /* ------------------------------------------------------------------ Sheet */
 
@@ -27,18 +28,21 @@ interface SheetProps {
  * and closes on Escape or scrim tap.
  */
 export function Sheet({ open, title, onClose, children, footer }: SheetProps) {
+  // Kept apart from the key handler below: `onClose` is usually an inline
+  // arrow, so that effect re-runs on every render, and the lock must not be
+  // dropped and retaken each time.
+  useEffect(() => {
+    if (!open) return;
+    return lockScroll(document.body);
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener('keydown', onKey);
-    };
+    return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
   if (!open) return null;
