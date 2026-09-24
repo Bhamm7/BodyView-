@@ -15,6 +15,7 @@ export const NAV: NavItem[] = [
   { to: '/', label: 'Today', icon: '🏠' },
   { to: '/health', label: 'Health', icon: '❤️' },
   { to: '/cycles', label: 'Cycles', icon: '💊' },
+  { to: '/bloodwork', label: 'Blood', icon: '🩸' },
   { to: '/nutrition', label: 'Food', icon: '🍽️' },
   { to: '/training', label: 'Train', icon: '🏋️' },
   { to: '/calendar', label: 'Calendar', icon: '📅' },

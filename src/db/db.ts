@@ -6,6 +6,8 @@ import type {
   Exercise,
   Food,
   InventoryItem,
+  LabPanel,
+  LabResult,
   MealEntry,
   MealPlan,
   MetricEntry,
@@ -27,6 +29,8 @@ import type { SyncState, Tombstone } from './sync-types';
  */
 export const SYNCED_COLLECTIONS = [
   'metrics',
+  'labPanels',
+  'labResults',
   'compounds',
   'protocols',
   'cycles',
@@ -53,6 +57,8 @@ export type SyncedCollection = (typeof SYNCED_COLLECTIONS)[number];
  */
 class BodyViewDB extends Dexie {
   metrics!: EntityTable<MetricEntry, 'id'>;
+  labPanels!: EntityTable<LabPanel, 'id'>;
+  labResults!: EntityTable<LabResult, 'id'>;
   compounds!: EntityTable<Compound, 'id'>;
   protocols!: EntityTable<Protocol, 'id'>;
   cycles!: EntityTable<Cycle, 'id'>;
@@ -136,6 +142,13 @@ class BodyViewDB extends Dexie {
     // a rotation. Purely additive, so no data migration is needed.
     this.version(3).stores({
       plans: 'id, name, active, updatedAt',
+    });
+
+    // v4 adds bloodwork: a panel per draw, and its results. Results are
+    // indexed by marker, so charting one marker across years is an index scan.
+    this.version(4).stores({
+      labPanels: 'id, date, updatedAt',
+      labResults: 'id, panelId, marker, [marker+panelId], updatedAt',
     });
 
     this.installChangeTracking();

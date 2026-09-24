@@ -175,6 +175,39 @@ export interface DoseLog {
 }
 
 /* ------------------------------------------------------------------ */
+/* Bloodwork                                                           */
+/* ------------------------------------------------------------------ */
+
+/** One blood draw: everything drawn on a date, kept together. */
+export interface LabPanel {
+  id: ID;
+  /** Collection date, which is what a result belongs to — not when it landed. */
+  date: ISODate;
+  label?: string;
+  /** Where the numbers came from, so a re-import can be explained. */
+  source?: 'paste' | 'file' | 'manual';
+  /** The report's own file name, when one was imported. */
+  fileName?: string;
+  notes?: string;
+}
+
+export interface LabResult {
+  id: ID;
+  panelId: ID;
+  /** Canonical marker key from lib/markers, when the name was recognised. */
+  marker?: string;
+  /** The name as the report wrote it — kept so an unmatched row is still useful. */
+  reportedName: string;
+  label: string;
+  value: number;
+  unit: string;
+  /** The reference range that came with the result, or the built-in fallback. */
+  low?: number;
+  high?: number;
+  note?: string;
+}
+
+/* ------------------------------------------------------------------ */
 /* Inventory                                                           */
 /* ------------------------------------------------------------------ */
 

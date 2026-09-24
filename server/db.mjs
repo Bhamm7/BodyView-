@@ -29,6 +29,8 @@ import { dirname } from 'node:path';
  */
 export const COLLECTIONS = [
   'metrics',
+  'labPanels',
+  'labResults',
   'compounds',
   'protocols',
   'cycles',

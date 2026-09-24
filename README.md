@@ -16,10 +16,25 @@ either way.
 | **Today** | Doses due, pinned metrics, calories and protein so far, and a one-tap way into a workout. |
 | **Health** | Weight, body fat, blood pressure, resting HR, HRV, sleep, steps, waist, temperature, glucose, mood and energy — with trend charts, a real 7-day average, and change over 30d/90d/6m/1y. |
 | **Cycles** | Peptides, PEDs, vitamins and supplements. A protocol is a compound plus a schedule; it drives a daily checklist, 30-day adherence, and the stock projections. |
+| **Blood** | Lab results imported from a PDF, a spreadsheet export or pasted text, then charted per marker against its reference range, with the protocols that were running over that window listed beside it. |
 | **Food** | Macro targets, a searchable food library, per-meal logging, and calorie/protein trends against target. |
 | **Train** | Exercise library, a live session logger built for one-handed use between sets, personal records, estimated 1RM trends, weekly volume and sets per muscle group. |
 | **Calendar** | A month at a glance: which days had doses, workouts, meals and readings, plus which days a protocol schedules a dose on. Tap any day for the full picture. |
 | **Stock** | What you have on the shelf, and when it runs out — worked out from your active protocols rather than entered by hand. |
+
+### Importing bloodwork
+
+MyHealth Records has no API for third-party apps, so an import starts from
+what it will give you: a PDF report, a spreadsheet export, or the results
+selected and copied. All three land on the same review screen, where each row
+shows the name it was read as, the value, the unit and the range it will be
+charted against — nothing is saved until you have looked at it. A name that is
+not recognised is kept, switched off, under whatever the report called it.
+
+PDFs are read in the browser with pdf.js, fetched only when a PDF is actually
+chosen. A scanned report has no text layer and cannot be read this way; it says
+so rather than guessing. Reference ranges come from the report when it prints
+them, and fall back to built-in adult-male SI ranges when it does not.
 
 ### Scheduling and stock projection
 
