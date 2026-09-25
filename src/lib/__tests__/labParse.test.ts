@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { parseDate, parseLabText } from '../labParse';
+import { parseDate, parseLabRows, parseLabText } from '../labParse';
 
-const find = (text: string, key: string) =>
-  parseLabText(text).rows.find((r) => r.markerKey === key);
+/** The rows of the first (usually only) draw in a parsed report. */
+const rowsOf = (text: string) => parseLabText(text).draws[0]?.rows ?? [];
+
+const find = (text: string, key: string) => rowsOf(text).find((r) => r.markerKey === key);
 
 describe('parseLabText — lines', () => {
   it('reads name, value, unit and range from a padded report line', () => {
@@ -51,9 +53,9 @@ describe('parseLabText — lines', () => {
   });
 
   it('does not mistake free testosterone for total', () => {
-    const rows = parseLabText(
+    const rows = rowsOf(
       ['Testosterone, Total    21.4 nmol/L   8.4 - 28.7', 'Free Testosterone  412 pmol/L  196 - 636'].join('\n'),
-    ).rows;
+    );
     assert.deepEqual(
       rows.map((r) => r.markerKey),
       ['testosterone', 'freeTestosterone'],
@@ -69,7 +71,7 @@ describe('parseLabText — lines', () => {
   });
 
   it('keeps an unrecognised marker, but off by default', () => {
-    const rows = parseLabText('Zonulin  42 ng/mL').rows;
+    const rows = rowsOf('Zonulin  42 ng/mL');
     assert.equal(rows.length, 1);
     assert.equal(rows[0].markerKey, undefined);
     assert.equal(rows[0].keep, false);
@@ -84,17 +86,17 @@ describe('parseLabText — lines', () => {
       'Page 1 of 3',
       'Sodium 139 mmol/L 135-145',
     ].join('\n');
-    const rows = parseLabText(noise).rows;
+    const rows = rowsOf(noise);
     assert.deepEqual(rows.map((r) => r.markerKey).filter(Boolean), ['sodium']);
   });
 
   it('takes the collection date off the report', () => {
     const result = parseLabText('Collected: 2026-09-18\nSodium 139 mmol/L');
-    assert.equal(result.date, '2026-09-18');
+    assert.equal(result.draws[0].date, '2026-09-18');
   });
 
   it('keeps one row per marker when a report repeats it', () => {
-    const rows = parseLabText('ALT 34 U/L\nSomething else\nALT 34 U/L').rows;
+    const rows = rowsOf('ALT 34 U/L\nSomething else\nALT 34 U/L');
     assert.equal(rows.filter((r) => r.markerKey === 'alt').length, 1);
   });
 });
@@ -111,7 +113,7 @@ describe('parseLabText — spreadsheet export', () => {
   it('reads a headed table', () => {
     const result = parseLabText(csv);
     assert.equal(result.shape, 'table');
-    assert.deepEqual(result.rows.map((r) => r.markerKey), [
+    assert.deepEqual(result.draws[0].rows.map((r) => r.markerKey), [
       'hemoglobin',
       'hematocrit',
       'cholesterol',
@@ -120,11 +122,11 @@ describe('parseLabText — spreadsheet export', () => {
   });
 
   it('takes the date from the table', () => {
-    assert.equal(parseLabText(csv).date, '2026-09-18');
+    assert.equal(parseLabText(csv).draws[0].date, '2026-09-18');
   });
 
   it('reads a quoted name containing a comma', () => {
-    const row = parseLabText(csv).rows.find((r) => r.markerKey === 'cholesterol');
+    const row = rowsOf(csv).find((r) => r.markerKey === 'cholesterol');
     assert.equal(row?.value, 4.85);
     assert.equal(row?.unit, 'mmol/L');
   });
@@ -134,7 +136,7 @@ describe('parseLabText — spreadsheet export', () => {
       'Analyte\tValue\tUnit\tLow\tHigh',
       'Creatinine\t86\tumol/L\t62\t106',
     ].join('\n');
-    const row = parseLabText(table).rows[0];
+    const row = rowsOf(table)[0];
     assert.equal(row.low, 62);
     assert.equal(row.high, 106);
   });
@@ -152,7 +154,7 @@ describe('parseDate', () => {
 
 describe('report furniture', () => {
   it('leaves collection stamps and accession numbers out', () => {
-    const rows = parseLabText(
+    const rows = rowsOf(
       [
         'Collected: 2026-08-08 07:30',
         'Received: 2026-08-08 09:12',
@@ -164,12 +166,133 @@ describe('report furniture', () => {
         'Phone: 403 555 0134',
         'Hemoglobin 148 g/L 135 - 175',
       ].join('\n'),
-    ).rows;
+    );
     assert.deepEqual(rows.map((r) => r.reportedName), ['Hemoglobin']);
   });
 
   it('still reads a marker whose name starts like a metadata word', () => {
-    const rows = parseLabText('Lactate 1.4 mmol/L').rows;
+    const rows = rowsOf('Lactate 1.4 mmol/L');
     assert.equal(rows.length, 1);
+  });
+});
+
+/**
+ * The shape a MyHealth Records export actually has: a disclaimer above the
+ * header, three columns with "Name" in them, a result column carrying its
+ * unit as text beside a structured one that does not, ranges with the unit
+ * repeated in brackets, and years of draws in one sheet.
+ */
+describe('portal export', () => {
+  const HEADER = [
+    'Date',
+    'Ordered By',
+    'Lab Group Name',
+    'Group Status',
+    'Laboratory Name',
+    'Test Name',
+    'Order Comment',
+    'Result',
+    'Structured Value',
+    'Unit',
+    'Reference Range (Units)',
+    'Reference Range (Units) Minimum Value',
+    'Reference Range (Units) Maximum Value',
+    'Result Status',
+  ];
+
+  const row = (
+    date: string,
+    group: string,
+    test: string,
+    result: string,
+    structured: string,
+    unit: string,
+    range: string,
+  ) => [date, 'FONG, ZHI', group, 'Final', 'CCLAB', test, 'Sent to provider', result, structured, unit, range, '', '', 'Final'];
+
+  const sheet = [
+    ['My Personal Records is a service provided by Alberta Health.'],
+    HEADER,
+    row('2026-07-07 08:12:00', 'CBC and Differential', 'Hemoglobin', '148 g/L', '148', 'g/L', '135-175 (g/L) g/L'),
+    row('2026-07-07 08:12:00', 'CBC and Differential', 'Auto WBC', '6.1 x10**9/L', '6.1', 'x10**9/L', '4.0-11.0 (x10**9/L) x10**9/L'),
+    row('2026-07-07 08:12:00', 'Lipid Panel', 'HDL Cholesterol', '1.02 mmol/L', '1.02', 'mmol/L', '>=1.00 (mmol/L) mmol/L'),
+    row('2026-07-07 08:12:00', 'Alanine Aminotransferase (ALT)', 'Alanine Aminotransferase (ALT)', '31 U/L', '31', 'U/L', '<70 (U/L) U/L'),
+    row('2026-09-24 09:06:00', 'CBC and Differential', 'Hemoglobin', '161 g/L', '161', 'g/L', '135-175 (g/L) g/L'),
+    row('2026-09-24 09:06:00', 'Luteinizing Hormone (LH)', 'Luteinizing Hormone (LH)', '<0.3 IU/L', '', '', '1.0-9.0 (IU/L) IU/L'),
+    row('2026-09-24 09:06:00', 'Creatinine', 'eGFRcr', '94 mL/min/1.73m2', '94', 'mL/min/1.73m2', '>59 (mL/min/1.73m2) mL/min/1.73m2'),
+    row('2026-09-24 09:06:00', 'Glucose, Fasting', 'Hours Fasting', '12.0 hour(s)', '12', 'hour(s)', ''),
+  ];
+
+  const parsed = () => parseLabRows(sheet)!;
+
+  it('finds the header below the disclaimer', () => {
+    assert.equal(parsed().shape, 'table');
+  });
+
+  it('splits the export into one draw per collection date', () => {
+    assert.deepEqual(parsed().draws.map((d) => d.date), ['2026-07-07', '2026-09-24']);
+  });
+
+  it('takes the analyte from Test Name, not from the group or the lab', () => {
+    const first = parsed().draws[0].rows;
+    assert.deepEqual(first.map((r) => r.markerKey), ['hemoglobin', 'wbc', 'hdl', 'alt']);
+  });
+
+  it('prefers the structured value over the result text', () => {
+    const hgb = parsed().draws[0].rows[0];
+    assert.equal(hgb.value, 148);
+    assert.equal(hgb.unit, 'g/L');
+  });
+
+  it('falls back to the result text when the structured value is empty', () => {
+    const lh = parsed().draws[1].rows.find((r) => r.markerKey === 'lh');
+    assert.equal(lh?.value, 0.3, 'a censored "<0.3" still charts at its limit');
+    assert.equal(lh?.unit, 'IU/L');
+  });
+
+  it('reads a range that repeats its unit in brackets', () => {
+    const hgb = parsed().draws[0].rows[0];
+    assert.equal(hgb.low, 135);
+    assert.equal(hgb.high, 175);
+  });
+
+  it('reads one-sided ranges, including >= and <', () => {
+    const hdl = parsed().draws[0].rows.find((r) => r.markerKey === 'hdl');
+    assert.equal(hdl?.low, 1);
+    assert.equal(hdl?.high, undefined);
+
+    const alt = parsed().draws[0].rows.find((r) => r.markerKey === 'alt');
+    assert.equal(alt?.high, 70);
+
+    const egfr = parsed().draws[1].rows.find((r) => r.markerKey === 'egfr');
+    assert.equal(egfr?.low, 59);
+  });
+
+  it('tidies units so two labs land on one axis', () => {
+    const wbc = parsed().draws[0].rows.find((r) => r.markerKey === 'wbc');
+    assert.equal(wbc?.unit, '10^9/L');
+  });
+
+  it('keeps a row it cannot name, switched off', () => {
+    const fasting = parsed().draws[1].rows.find((r) => r.reportedName === 'Hours Fasting');
+    assert.equal(fasting?.keep, false);
+    assert.equal(fasting?.markerKey, undefined);
+  });
+
+  it('reads a date held as an Excel serial number', () => {
+    const serial = [HEADER, row('46289.3791666667', 'Creatinine', 'Creatinine', '92 umol/L', '92', 'umol/L', '50-120 (umol/L) umol/L')];
+    assert.equal(parseLabRows(serial)!.draws[0].date, '2026-09-24');
+  });
+});
+
+describe('units the report did not give', () => {
+  it('leaves the unit empty rather than borrowing the table one', () => {
+    const rows = parseLabRows([
+      ['Test Name', 'Structured Value', 'Unit', 'Reference Range (Units)'],
+      ['Iron Saturation Index', '0.21', '', '0.12-0.60'],
+    ])!.draws[0].rows;
+    assert.equal(rows[0].markerKey, 'ironSaturation');
+    assert.equal(rows[0].unit, '', 'a fraction must not be labelled %');
+    assert.equal(rows[0].low, 0.12);
   });
 });

@@ -57,7 +57,7 @@ const M = (def: MarkerDef): MarkerDef => def;
 export const MARKERS: MarkerDef[] = [
   // Hormones
   M({ key: 'testosterone', label: 'Testosterone, total', short: 'Test', category: 'hormones', unit: 'nmol/L', range: { low: 8.4, high: 28.7 }, aliases: ['testosterone total', 'total testosterone', 'testosterone'], convert: { 'ng/dl': 0.03467, 'ng/ml': 3.467 }, decimals: 1 }),
-  M({ key: 'freeTestosterone', label: 'Testosterone, free', short: 'Free T', category: 'hormones', unit: 'pmol/L', range: { low: 196, high: 636 }, aliases: ['free testosterone', 'testosterone free', 'bioavailable testosterone'], convert: { 'pg/ml': 3.467 }, decimals: 0 }),
+  M({ key: 'freeTestosterone', label: 'Testosterone, free', short: 'Free T', category: 'hormones', unit: 'pmol/L', range: { low: 196, high: 636 }, aliases: ['free testosterone', 'testosterone free', 'bioavailable testosterone', 'testosterone free calculated'], convert: { 'pg/ml': 3.467 }, decimals: 0 }),
   M({ key: 'estradiol', label: 'Estradiol', short: 'E2', category: 'hormones', unit: 'pmol/L', range: { low: 40, high: 160 }, aliases: ['estradiol', 'oestradiol', 'e2', 'estradiol sensitive'], convert: { 'pg/ml': 3.671 }, decimals: 0 }),
   M({ key: 'shbg', label: 'SHBG', category: 'hormones', unit: 'nmol/L', range: { low: 18, high: 54 }, aliases: ['shbg', 'sex hormone binding globulin'], decimals: 0 }),
   M({ key: 'lh', label: 'LH', category: 'hormones', unit: 'IU/L', range: { low: 1.7, high: 8.6 }, aliases: ['lh', 'luteinizing hormone'], decimals: 1 }),
@@ -70,9 +70,9 @@ export const MARKERS: MarkerDef[] = [
 
   // Lipids
   M({ key: 'cholesterol', label: 'Cholesterol, total', short: 'TC', category: 'lipids', unit: 'mmol/L', range: { high: 5.2 }, aliases: ['cholesterol', 'total cholesterol', 'cholesterol total'], convert: { 'mg/dl': 0.02586 }, decimals: 2 }),
-  M({ key: 'ldl', label: 'LDL cholesterol', short: 'LDL', category: 'lipids', unit: 'mmol/L', range: { high: 3.4 }, aliases: ['ldl', 'ldl cholesterol', 'ldl c', 'cholesterol ldl calculated'], convert: { 'mg/dl': 0.02586 }, decimals: 2 }),
-  M({ key: 'hdl', label: 'HDL cholesterol', short: 'HDL', category: 'lipids', unit: 'mmol/L', range: { low: 1.0 }, aliases: ['hdl', 'hdl cholesterol', 'hdl c', 'cholesterol hdl'], convert: { 'mg/dl': 0.02586 }, decimals: 2 }),
-  M({ key: 'nonHdl', label: 'Non-HDL cholesterol', short: 'Non-HDL', category: 'lipids', unit: 'mmol/L', range: { high: 4.2 }, aliases: ['non hdl cholesterol', 'non hdl', 'non hdl c'], convert: { 'mg/dl': 0.02586 }, decimals: 2 }),
+  M({ key: 'ldl', label: 'LDL cholesterol', short: 'LDL', category: 'lipids', unit: 'mmol/L', range: { high: 3.4 }, aliases: ['ldl', 'ldl cholesterol', 'ldl c', 'cholesterol ldl calculated', 'low density lipoprotein cholesterol'], convert: { 'mg/dl': 0.02586 }, decimals: 2 }),
+  M({ key: 'hdl', label: 'HDL cholesterol', short: 'HDL', category: 'lipids', unit: 'mmol/L', range: { low: 1.0 }, aliases: ['hdl', 'hdl cholesterol', 'hdl c', 'cholesterol hdl', 'high density lipoprotein cholesterol'], convert: { 'mg/dl': 0.02586 }, decimals: 2 }),
+  M({ key: 'nonHdl', label: 'Non-HDL cholesterol', short: 'Non-HDL', category: 'lipids', unit: 'mmol/L', range: { high: 4.2 }, aliases: ['non hdl cholesterol', 'non hdl', 'non hdl c', 'non high density lipoprotein cholesterol'], convert: { 'mg/dl': 0.02586 }, decimals: 2 }),
   M({ key: 'triglycerides', label: 'Triglycerides', short: 'Trig', category: 'lipids', unit: 'mmol/L', range: { high: 1.7 }, aliases: ['triglycerides', 'triglyceride', 'tg'], convert: { 'mg/dl': 0.01129 }, decimals: 2 }),
   M({ key: 'apob', label: 'Apolipoprotein B', short: 'ApoB', category: 'lipids', unit: 'g/L', range: { high: 1.05 }, aliases: ['apolipoprotein b', 'apo b', 'apob'], decimals: 2 }),
   M({ key: 'lpa', label: 'Lipoprotein(a)', short: 'Lp(a)', category: 'lipids', unit: 'nmol/L', range: { high: 75 }, aliases: ['lipoprotein a', 'lp a', 'lpa'], decimals: 0 }),
@@ -80,11 +80,11 @@ export const MARKERS: MarkerDef[] = [
 
   // Kidney
   M({ key: 'creatinine', label: 'Creatinine', category: 'renal', unit: 'umol/L', range: { low: 62, high: 106 }, aliases: ['creatinine', 'creat'], convert: { 'mg/dl': 88.4 }, decimals: 0 }),
-  M({ key: 'egfr', label: 'eGFR', category: 'renal', unit: 'mL/min/1.73m2', range: { low: 90 }, aliases: ['egfr', 'gfr', 'estimated gfr', 'egfr ckd epi'], decimals: 0 }),
+  M({ key: 'egfr', label: 'eGFR', category: 'renal', unit: 'mL/min/1.73m2', range: { low: 90 }, aliases: ['egfr', 'gfr', 'estimated gfr', 'egfr ckd epi', 'egfrcr', 'egfr creatinine'], decimals: 0 }),
   M({ key: 'cystatinC', label: 'Cystatin C', category: 'renal', unit: 'mg/L', range: { low: 0.51, high: 0.98 }, aliases: ['cystatin c'], decimals: 2 }),
   M({ key: 'uacr', label: 'Urine albumin : creatinine', short: 'uACR', category: 'renal', unit: 'mg/mmol', range: { high: 3 }, aliases: ['albumin creatinine ratio', 'urine albumin creatinine ratio', 'uacr', 'acr', 'microalbumin creatinine ratio'], decimals: 1 }),
   M({ key: 'urea', label: 'Urea', category: 'renal', unit: 'mmol/L', range: { low: 3, high: 9.2 }, aliases: ['urea', 'bun', 'blood urea nitrogen'], decimals: 1 }),
-  M({ key: 'uricAcid', label: 'Uric acid', category: 'renal', unit: 'umol/L', range: { low: 200, high: 430 }, aliases: ['uric acid', 'urate'], decimals: 0 }),
+  M({ key: 'uricAcid', label: 'Uric acid', category: 'renal', unit: 'umol/L', range: { low: 200, high: 430 }, aliases: ['uric acid', 'urate', 'urate serum'], decimals: 0 }),
 
   // Electrolytes
   M({ key: 'sodium', label: 'Sodium', short: 'Na', category: 'electrolytes', unit: 'mmol/L', range: { low: 135, high: 145 }, aliases: ['sodium'], decimals: 0 }),
@@ -106,9 +106,9 @@ export const MARKERS: MarkerDef[] = [
   // Blood count
   M({ key: 'hemoglobin', label: 'Hemoglobin', short: 'Hgb', category: 'cbc', unit: 'g/L', range: { low: 135, high: 175 }, aliases: ['hemoglobin', 'haemoglobin', 'hgb', 'hb'], convert: { 'g/dl': 10 }, decimals: 0 }),
   M({ key: 'hematocrit', label: 'Hematocrit', short: 'Hct', category: 'cbc', unit: 'L/L', range: { low: 0.4, high: 0.5 }, aliases: ['hematocrit', 'haematocrit', 'hct'], decimals: 3 }),
-  M({ key: 'rbc', label: 'Red cell count', short: 'RBC', category: 'cbc', unit: '10*12/L', range: { low: 4.5, high: 5.9 }, aliases: ['rbc', 'red blood cell count', 'red cell count', 'erythrocytes'], decimals: 2 }),
-  M({ key: 'wbc', label: 'White cell count', short: 'WBC', category: 'cbc', unit: '10*9/L', range: { low: 4, high: 11 }, aliases: ['wbc', 'white blood cell count', 'white cell count', 'leukocytes'], decimals: 1 }),
-  M({ key: 'platelets', label: 'Platelets', short: 'Plt', category: 'cbc', unit: '10*9/L', range: { low: 150, high: 400 }, aliases: ['platelets', 'platelet count', 'plt'], decimals: 0 }),
+  M({ key: 'rbc', label: 'Red cell count', short: 'RBC', category: 'cbc', unit: '10^12/L', range: { low: 4.5, high: 5.9 }, aliases: ['rbc', 'red blood cell count', 'red cell count', 'erythrocytes'], decimals: 2 }),
+  M({ key: 'wbc', label: 'White cell count', short: 'WBC', category: 'cbc', unit: '10^9/L', range: { low: 4, high: 11 }, aliases: ['wbc', 'white blood cell count', 'white cell count', 'leukocytes', 'auto wbc', 'wbc auto'], decimals: 1 }),
+  M({ key: 'platelets', label: 'Platelets', short: 'Plt', category: 'cbc', unit: '10^9/L', range: { low: 150, high: 400 }, aliases: ['platelets', 'platelet count', 'plt'], decimals: 0 }),
   M({ key: 'ferritin', label: 'Ferritin', category: 'cbc', unit: 'ug/L', range: { low: 30, high: 400 }, aliases: ['ferritin'], decimals: 0 }),
   M({ key: 'iron', label: 'Iron', category: 'cbc', unit: 'umol/L', range: { low: 10, high: 30 }, aliases: ['iron', 'serum iron'], decimals: 0 }),
 
@@ -126,7 +126,25 @@ export const MARKERS: MarkerDef[] = [
 
   // Inflammation
   M({ key: 'crp', label: 'CRP (high sensitivity)', short: 'hs-CRP', category: 'inflammation', unit: 'mg/L', range: { high: 3 }, aliases: ['crp', 'c reactive protein', 'hs crp', 'high sensitivity crp'], decimals: 1 }),
-  M({ key: 'homocysteine', label: 'Homocysteine', category: 'inflammation', unit: 'umol/L', range: { high: 15 }, aliases: ['homocysteine'], decimals: 1 }),
+  M({ key: 'homocysteine', label: 'Homocysteine', category: 'inflammation', unit: 'umol/L', range: { high: 15 }, aliases: ['homocysteine', 'homocysteine total'], decimals: 1 }),
+  // Blood count, differential
+  M({ key: 'neutrophils', label: 'Neutrophils', category: 'cbc', unit: '10^9/L', range: { low: 1.8, high: 7.5 }, aliases: ['neutrophil absolute', 'neutrophils absolute', 'auto neutrophils', 'neutrophils'], decimals: 1 }),
+  M({ key: 'lymphocytes', label: 'Lymphocytes', category: 'cbc', unit: '10^9/L', range: { low: 0.5, high: 4.5 }, aliases: ['lymphocytes absolute', 'lymphocyte absolute', 'lymphocytes'], decimals: 1 }),
+  M({ key: 'monocytes', label: 'Monocytes', category: 'cbc', unit: '10^9/L', range: { low: 0, high: 1.1 }, aliases: ['monocytes absolute', 'monocyte absolute', 'monocytes'], decimals: 1 }),
+  M({ key: 'eosinophils', label: 'Eosinophils', category: 'cbc', unit: '10^9/L', range: { low: 0, high: 0.7 }, aliases: ['eosinophils absolute', 'eosinophil absolute', 'eosinophils'], decimals: 1 }),
+  M({ key: 'basophils', label: 'Basophils', category: 'cbc', unit: '10^9/L', range: { low: 0, high: 0.3 }, aliases: ['basophils absolute', 'basophil absolute', 'basophils'], decimals: 1 }),
+  M({ key: 'immatureGranulocytes', label: 'Immature granulocytes', category: 'cbc', unit: '10^9/L', range: { low: 0, high: 0.1 }, aliases: ['immature granulocytes absolute', 'immature granulocytes'], decimals: 2 }),
+  M({ key: 'nrbc', label: 'Nucleated RBC', short: 'nRBC', category: 'cbc', unit: '/100 WBCs', range: { high: 1 }, aliases: ['nrbc', 'nucleated rbc', 'nucleated red blood cells'], decimals: 1 }),
+  M({ key: 'mcv', label: 'MCV', category: 'cbc', unit: 'fL', range: { low: 80, high: 100 }, aliases: ['mcv', 'mean cell volume', 'mean corpuscular volume'], decimals: 0 }),
+  M({ key: 'mchc', label: 'MCHC', category: 'cbc', unit: 'g/L', range: { low: 310, high: 360 }, aliases: ['mchc', 'mean cell hemoglobin concentration'], decimals: 0 }),
+  M({ key: 'rdw', label: 'RDW', category: 'cbc', unit: '%', range: { high: 16 }, aliases: ['rdw', 'red cell distribution width'], decimals: 1 }),
+  M({ key: 'tibc', label: 'Total iron binding capacity', short: 'TIBC', category: 'cbc', unit: 'umol/L', range: { low: 45, high: 80 }, aliases: ['total iron binding capacity', 'tibc'], decimals: 0 }),
+  M({ key: 'ironSaturation', label: 'Iron saturation', category: 'cbc', unit: '%', range: { low: 12, high: 60 }, aliases: ['iron saturation index', 'iron saturation', 'transferrin saturation'], decimals: 0 }),
+
+  // Other chemistry
+  M({ key: 'ck', label: 'Creatine kinase', short: 'CK', category: 'liver', unit: 'U/L', range: { low: 30, high: 350 }, aliases: ['creatine kinase', 'ck total', 'cpk'], decimals: 0 }),
+  M({ key: 'lipase', label: 'Lipase', category: 'liver', unit: 'U/L', range: { high: 60 }, aliases: ['lipase'], decimals: 0 }),
+  M({ key: 'dDimer', label: 'D-dimer', category: 'inflammation', unit: 'mg/L FEU', range: { high: 0.5 }, aliases: ['d dimer quantitative feu', 'd dimer quantitative', 'd dimer', 'ddimer'], decimals: 2 }),
 ];
 
 const BY_KEY = new Map(MARKERS.map((m) => [m.key, m]));
@@ -175,7 +193,10 @@ export function toCanonicalUnit(
   unit?: string,
 ): { value: number; unit: string; converted: boolean } {
   const reported = (unit ?? '').trim();
-  if (!reported) return { value, unit: def.unit, converted: false };
+  // An absent unit stays absent. Assuming this table's unit would relabel a
+  // value reported on another scale — 0.21 as "0.21 %" — which is worse than
+  // showing a bare number.
+  if (!reported) return { value, unit: '', converted: false };
   if (normalizeName(reported) === normalizeName(def.unit)) {
     return { value, unit: def.unit, converted: false };
   }
@@ -183,6 +204,26 @@ export function toCanonicalUnit(
   const factor = def.convert?.[reported.toLowerCase()];
   if (factor == null) return { value, unit: reported, converted: false };
   return { value: Number((value * factor).toPrecision(6)), unit: def.unit, converted: true };
+}
+
+/**
+ * How many decimals to show for a value of this marker.
+ *
+ * The table's `decimals` suits the unit a marker usually arrives in, but a lab
+ * can report the same quantity another way — an iron saturation of 0.28 where
+ * the table expects 28% — and rounding that to "0" is worse than useless. So
+ * the figure is widened until the number actually shows.
+ */
+export function displayDecimals(value: number, def?: MarkerDef): number {
+  let decimals = def?.decimals ?? 2;
+  if (!Number.isFinite(value) || value === 0) return decimals;
+
+  // Below one, two decimals is the floor: a fraction wants two significant
+  // figures, and a marker's own figure assumes the unit it usually arrives in.
+  if (Math.abs(value) < 1) decimals = Math.max(decimals, 2);
+  // And keep going while rounding would erase the value altogether.
+  while (decimals < 4 && Number(value.toFixed(decimals)) === 0) decimals += 1;
+  return decimals;
 }
 
 export type RangeStatus = 'low' | 'high' | 'in' | 'unknown';

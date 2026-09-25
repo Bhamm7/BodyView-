@@ -25,11 +25,16 @@ either way.
 ### Importing bloodwork
 
 MyHealth Records has no API for third-party apps, so an import starts from
-what it will give you: a PDF report, a spreadsheet export, or the results
-selected and copied. All three land on the same review screen, where each row
+what it will give you: the **My Personal Records spreadsheet export** (.xlsx),
+a PDF report, a CSV, or the results selected and copied. All three land on the same review screen, where each row
 shows the name it was read as, the value, the unit and the range it will be
 charted against — nothing is saved until you have looked at it. A name that is
 not recognised is kept, switched off, under whatever the report called it.
+
+The spreadsheet export holds every draw it has on file, so it is split into a
+panel per collection date, and a date already imported is shown ticked off
+rather than added twice. Reading .xlsx needs no library: a workbook is a ZIP
+of XML, and the browser already has `DecompressionStream` and `DOMParser`.
 
 PDFs are read in the browser with pdf.js, fetched only when a PDF is actually
 chosen. A scanned report has no text layer and cannot be read this way; it says

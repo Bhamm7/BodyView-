@@ -1,4 +1,5 @@
 import { matchMarker, toCanonicalUnit, type MarkerDef } from './markers';
+import { excelSerialToISODate } from './xlsx';
 
 /**
  * Turns a pasted or extracted lab report into rows worth reviewing.
@@ -36,7 +37,12 @@ const UNIT = String.raw`(?:x?10[*^]?\d*\s*\/?\s*[a-zA-Z]+|%|[a-zA-Zµμ][a-zA-Z0
 
 const RANGE_SEP = String.raw`(?:\s*(?:-|–|—|to)\s*)`;
 
-const toNumber = (raw: string): number => Number(raw.replace(/[ ,]/g, ''));
+const toNumber = (raw: string): number => {
+  // `Number('')` is 0, which would quietly turn an empty range column into a
+  // range that starts at zero. A blank cell is an absent number, not a zero.
+  const text = raw.replace(/[ ,]/g, '');
+  return text === '' ? Number.NaN : Number(text);
+};
 
 /** "<0.5" and ">90" carry a real number for charting; the operator is dropped. */
 function stripOperator(raw: string): string {
@@ -177,82 +183,226 @@ function splitDelimited(line: string, delimiter: string): string[] {
   return out.map((f) => f.trim());
 }
 
+/**
+ * Column headers, most specific first.
+ *
+ * Order carries meaning: a MyHealth Records export has "Lab Group Name",
+ * "Laboratory Name" and "Test Name", and only the last one names the analyte.
+ * It also has both "Result" ("25 U/L") and "Structured Value" ("25"), and the
+ * structured one is the number to trust. So each hint is tried as an exact
+ * header before any of them is tried as a substring.
+ */
 const HEADER_HINTS = {
-  name: ['test', 'name', 'analyte', 'marker', 'component', 'description'],
-  value: ['result', 'value', 'reading'],
+  name: ['test name', 'analyte', 'marker name', 'component', 'test', 'analyte name', 'name'],
+  value: ['structured value', 'numeric result', 'value', 'result', 'reading'],
   unit: ['unit', 'units', 'uom'],
-  low: ['low', 'min', 'lower', 'range low', 'ref low'],
-  high: ['high', 'max', 'upper', 'range high', 'ref high'],
-  range: ['reference', 'reference range', 'ref range', 'normal range', 'range'],
-  date: ['date', 'collected', 'collection date', 'drawn'],
+  low: ['reference range units minimum value', 'minimum value', 'range low', 'ref low', 'low', 'min'],
+  high: ['reference range units maximum value', 'maximum value', 'range high', 'ref high', 'high', 'max'],
+  range: ['reference range units', 'reference range', 'ref range', 'normal range', 'reference', 'range'],
+  date: ['collection date', 'collected', 'date drawn', 'date', 'drawn'],
+  /** Not a marker — the row's own status, used to skip cancelled results. */
+  status: ['result status', 'status'],
 };
 
-const pick = (headers: string[], hints: string[]): number =>
-  headers.findIndex((h) => hints.some((hint) => h === hint || h.includes(hint)));
+const normalizeHeader = (text: string): string =>
+  text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
-/** A spreadsheet export: one row per marker, with headers naming the columns. */
-function parseTable(text: string): { rows: ParsedRow[]; date?: string } | null {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim());
-  if (lines.length < 2) return null;
+/** Exact header match for any hint first, then a contained one, in hint order. */
+function pick(headers: string[], hints: string[]): number {
+  for (const hint of hints) {
+    const at = headers.indexOf(hint);
+    if (at >= 0) return at;
+  }
+  for (const hint of hints) {
+    const at = headers.findIndex((h) => h.includes(hint));
+    if (at >= 0) return at;
+  }
+  return -1;
+}
 
-  const delimiter = (lines[0].match(/\t/g)?.length ?? 0) > (lines[0].match(/,/g)?.length ?? 0) ? '\t' : ',';
-  const headers = splitDelimited(lines[0], delimiter).map((h) => h.toLowerCase());
-  const nameAt = pick(headers, HEADER_HINTS.name);
-  const valueAt = pick(headers, HEADER_HINTS.value);
-  if (nameAt < 0 || valueAt < 0) return null;
+/**
+ * Units as a report writes them, tidied so the same quantity from two labs
+ * lands on one axis: "x10**9/L" and "10^9/L" are the same unit.
+ */
+export function normalizeUnit(unit: string): string {
+  const text = unit.trim();
+  if (!text) return '';
+  return text
+    .replace(/^x/i, '')
+    .replace(/10\s*\*\*\s*(\d+)/i, '10^$1')
+    .replace(/10\s*\^\s*(\d+)/i, '10^$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** A measurement written as one string: "25 U/L", "<0.3 IU/L", "0.492". */
+function readMeasure(text: string): { value: number; unit: string } | null {
+  const match = text
+    .trim()
+    .match(new RegExp(String.raw`^[<>≤≥]?\s*=?\s*(${NUMBER})\s*(.*)$`));
+  if (!match) return null;
+  const value = toNumber(match[1]);
+  if (!Number.isFinite(value)) return null;
+  return { value, unit: normalizeUnit(match[2] ?? '') };
+}
+
+/**
+ * A reference range as printed beside a result: "40-120 (U/L) U/L",
+ * ">=1.00 (mmol/L)", "<70", ">59". The unit in brackets is dropped — it is the
+ * result's unit repeated, and leaving it in would have the range's own digits
+ * competing with the unit's.
+ */
+export function readRange(text: string): { low?: number; high?: number } {
+  const cleaned = text.replace(/\((?:[^()]*)\)/g, ' ').trim();
+  if (!cleaned) return {};
+
+  const pair = cleaned.match(new RegExp(String.raw`(${NUMBER})${RANGE_SEP}(${NUMBER})`));
+  if (pair) {
+    let low = toNumber(pair[1]);
+    let high = toNumber(pair[2]);
+    if (low > high) [low, high] = [high, low];
+    return { low, high };
+  }
+
+  const atMost = cleaned.match(new RegExp(String.raw`[<≤]\s*=?\s*(${NUMBER})`));
+  if (atMost) return { high: toNumber(atMost[1]) };
+
+  const atLeast = cleaned.match(new RegExp(String.raw`[>≥]\s*=?\s*(${NUMBER})`));
+  if (atLeast) return { low: toNumber(atLeast[1]) };
+
+  return {};
+}
+
+/** Builds a reviewable row from already-separated fields. */
+function rowFromFields(fields: {
+  name: string;
+  value: number;
+  unit: string;
+  low?: number;
+  high?: number;
+}): ParsedRow {
+  const def = matchMarker(fields.name);
+  const canonical = def
+    ? toCanonicalUnit(def, fields.value, fields.unit)
+    : { value: fields.value, unit: fields.unit, converted: false };
+  const factor = canonical.converted && fields.value !== 0 ? canonical.value / fields.value : 1;
+
+  const scale = (bound?: number) =>
+    bound == null ? undefined : Number((bound * factor).toPrecision(6));
+
+  return {
+    reportedName: fields.name,
+    markerKey: def?.key,
+    label: def?.label ?? fields.name,
+    value: Number(canonical.value.toPrecision(6)),
+    // No unit substituted when the report printed none: a lab that reports
+    // iron saturation as 0.21 rather than 21% would otherwise be labelled "%"
+    // by this table and read as a fifth of what it is.
+    unit: normalizeUnit(canonical.unit),
+    low: fields.low == null ? def?.range?.low : scale(fields.low),
+    high: fields.high == null ? def?.range?.high : scale(fields.high),
+    converted: canonical.converted || undefined,
+    keep: !!def,
+  };
+}
+
+/**
+ * A table of results — a spreadsheet export, or a CSV.
+ *
+ * The header is not assumed to be the first row: an export usually opens with
+ * a disclaimer, so the first row that looks like headers is the header. Rows
+ * are grouped by their collection date, because one export routinely holds
+ * years of draws and each draw is its own panel.
+ */
+function parseTable(rows: string[][]): ParseResult | null {
+  if (rows.length < 2) return null;
+
+  let headerAt = -1;
+  let headers: string[] = [];
+  let nameAt = -1;
+  let valueAt = -1;
+
+  for (let i = 0; i < Math.min(rows.length, 12); i++) {
+    const candidate = rows[i].map(normalizeHeader);
+    const name = pick(candidate, HEADER_HINTS.name);
+    const value = pick(candidate, HEADER_HINTS.value);
+    if (name >= 0 && value >= 0 && name !== value) {
+      headerAt = i;
+      headers = candidate;
+      nameAt = name;
+      valueAt = value;
+      break;
+    }
+  }
+  if (headerAt < 0) return null;
 
   const unitAt = pick(headers, HEADER_HINTS.unit);
   const lowAt = pick(headers, HEADER_HINTS.low);
   const highAt = pick(headers, HEADER_HINTS.high);
   const rangeAt = pick(headers, HEADER_HINTS.range);
   const dateAt = pick(headers, HEADER_HINTS.date);
+  const statusAt = pick(headers, HEADER_HINTS.status);
+  // The column the structured value was taken from may leave censored results
+  // ("<0.3 IU/L") empty, with the text sitting in a plainer result column.
+  const textValueAt = pick(headers, ['result', 'reading', 'value']);
 
-  const rows: ParsedRow[] = [];
-  let date: string | undefined;
+  const byDate = new Map<string, ParsedRow[]>();
+  let any = false;
 
-  for (const line of lines.slice(1)) {
-    const cells = splitDelimited(line, delimiter);
+  for (const cells of rows.slice(headerAt + 1)) {
     const name = cleanName(cells[nameAt] ?? '');
-    const rawValue = stripOperator((cells[valueAt] ?? '').trim());
-    const value = toNumber(rawValue);
-    if (!name || !Number.isFinite(value) || rawValue === '') continue;
+    if (!name || METADATA.test(name)) continue;
+
+    const status = statusAt >= 0 ? (cells[statusAt] ?? '').toLowerCase() : '';
+    if (/cancel|pending|in progress/.test(status)) continue;
+
+    let measure = readMeasure(cells[valueAt] ?? '');
+    if (!measure && textValueAt >= 0 && textValueAt !== valueAt) {
+      measure = readMeasure(cells[textValueAt] ?? '');
+    }
+    if (!measure) continue;
+
+    let unit = unitAt >= 0 ? normalizeUnit(cells[unitAt] ?? '') : '';
+    if (!unit) unit = measure.unit;
 
     let low = lowAt >= 0 ? toNumber(cells[lowAt] ?? '') : NaN;
     let high = highAt >= 0 ? toNumber(cells[highAt] ?? '') : NaN;
-    if (rangeAt >= 0 && (!Number.isFinite(low) || !Number.isFinite(high))) {
-      const pair = (cells[rangeAt] ?? '').match(new RegExp(String.raw`(${NUMBER})${RANGE_SEP}(${NUMBER})`));
-      if (pair) {
-        low = toNumber(pair[1]);
-        high = toNumber(pair[2]);
-      }
+    if ((!Number.isFinite(low) || !Number.isFinite(high)) && rangeAt >= 0) {
+      const parsed = readRange(cells[rangeAt] ?? '');
+      if (!Number.isFinite(low) && parsed.low != null) low = parsed.low;
+      if (!Number.isFinite(high) && parsed.high != null) high = parsed.high;
     }
 
-    if (dateAt >= 0 && !date) {
-      const parsed = parseDate(cells[dateAt] ?? '');
-      if (parsed) date = parsed;
-    }
-
-    const def = matchMarker(name);
-    const unit = unitAt >= 0 ? (cells[unitAt] ?? '').trim() : '';
-    const canonical = def ? toCanonicalUnit(def, value, unit) : { value, unit, converted: false };
-    const factor = canonical.converted && value !== 0 ? canonical.value / value : 1;
-
-    rows.push({
-      reportedName: name,
-      markerKey: def?.key,
-      label: def?.label ?? name,
-      value: Number(canonical.value.toPrecision(6)),
-      unit: canonical.unit || def?.unit || '',
-      low: Number.isFinite(low) ? Number((low * factor).toPrecision(6)) : def?.range?.low,
-      high: Number.isFinite(high) ? Number((high * factor).toPrecision(6)) : def?.range?.high,
-      converted: canonical.converted || undefined,
-      keep: !!def,
+    const row = rowFromFields({
+      name,
+      value: measure.value,
+      unit,
+      low: Number.isFinite(low) ? low : undefined,
+      high: Number.isFinite(high) ? high : undefined,
     });
+
+    const date = dateAt >= 0 ? readDateCell(cells[dateAt] ?? '') : undefined;
+    const key = date ?? '';
+    byDate.set(key, [...(byDate.get(key) ?? []), row]);
+    any = true;
   }
 
-  return rows.length > 0 ? { rows, date } : null;
+  if (!any) return null;
+
+  const draws = [...byDate.entries()]
+    .map(([date, list]) => ({ date: date || undefined, rows: dedupe(list) }))
+    .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+
+  return { draws, shape: 'table' };
 }
 
+/** A date cell: text a person would recognise, or an Excel serial number. */
+function readDateCell(text: string): string | undefined {
+  const direct = parseDate(text);
+  if (direct) return direct;
+  const serial = Number(text);
+  return Number.isFinite(serial) ? excelSerialToISODate(serial) : undefined;
+}
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
 /** Pulls a collection date out of report text, in the formats labs print. */
@@ -283,25 +433,57 @@ export function parseDate(text: string): string | undefined {
   return undefined;
 }
 
-export interface ParseResult {
-  rows: ParsedRow[];
-  /** Collection date found in the report, if any. */
+/** One blood draw's worth of rows, as read from a report. */
+export interface ParsedDraw {
+  /** Collection date, when the report gave one. */
   date?: string;
-  /** How the text was read, so the review screen can say so. */
+  rows: ParsedRow[];
+}
+
+export interface ParseResult {
+  /**
+   * A draw per collection date. A pasted page is one draw; a portal export is
+   * routinely years of them, and splitting on the date is what makes each one
+   * a panel rather than a single implausible draw with six hemoglobins in it.
+   */
+  draws: ParsedDraw[];
+  /** How the report was read, so the review screen can say so. */
   shape: 'table' | 'lines';
 }
 
-/** Parses pasted text, a spreadsheet export, or text lifted out of a PDF. */
-export function parseLabText(text: string): ParseResult {
-  const table = parseTable(text);
-  if (table) return { rows: dedupe(table.rows), date: table.date, shape: 'table' };
+/** Splits a delimited text file into rows, then reads it as a table. */
+function textToRows(text: string): string[][] | null {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) return null;
+  const tabs = lines[0].match(/\t/g)?.length ?? 0;
+  const commas = lines[0].match(/,/g)?.length ?? 0;
+  if (tabs === 0 && commas === 0) return null;
+  const delimiter = tabs > commas ? '\t' : ',';
+  return lines.map((line) => splitDelimited(line, delimiter));
+}
 
-  const rows: ParsedRow[] = [];
+/** Parses pasted text, a CSV export, or text lifted out of a PDF. */
+export function parseLabText(text: string): ParseResult {
+  const rows = textToRows(text);
+  if (rows) {
+    const table = parseTable(rows);
+    if (table) return table;
+  }
+
+  const lineRows: ParsedRow[] = [];
   for (const line of text.split(/\r?\n/)) {
     const row = parseLine(line);
-    if (row) rows.push(row);
+    if (row) lineRows.push(row);
   }
-  return { rows: dedupe(rows), date: parseDate(text), shape: 'lines' };
+  return {
+    draws: [{ date: parseDate(text), rows: dedupe(lineRows) }],
+    shape: 'lines',
+  };
+}
+
+/** Parses a sheet already split into cells — a spreadsheet export. */
+export function parseLabRows(rows: string[][]): ParseResult | null {
+  return parseTable(rows);
 }
 
 /**

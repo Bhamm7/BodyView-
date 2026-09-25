@@ -10,7 +10,13 @@ import { useProtocols } from '@/hooks/useData';
 import { useCompoundMap } from '@/hooks/useData';
 import { formatDay } from '@/lib/date';
 import { num } from '@/lib/format';
-import { CATEGORY_LABELS, markerDef, rangeStatus, type MarkerCategory } from '@/lib/markers';
+import {
+  CATEGORY_LABELS,
+  displayDecimals,
+  markerDef,
+  rangeStatus,
+  type MarkerCategory,
+} from '@/lib/markers';
 
 type Tab = 'markers' | 'panels';
 
@@ -120,7 +126,8 @@ export default function Bloodwork() {
                       const delta = entry.previous
                         ? entry.latest.value - entry.previous.value
                         : null;
-                      const decimals = entry.def?.decimals ?? 2;
+                      const decimals = displayDecimals(entry.latest.value, entry.def);
+                      const moved = delta != null && Number(delta.toFixed(decimals)) !== 0;
                       return (
                         <button
                           key={entry.key}
@@ -133,9 +140,11 @@ export default function Bloodwork() {
                               {entry.readings.length === 1
                                 ? 'one draw'
                                 : `${entry.readings.length} draws`}
-                              {delta != null
-                                ? ` · ${delta > 0 ? '+' : '−'}${num(Math.abs(delta), decimals)} since last`
-                                : ''}
+                              {delta == null
+                                ? ''
+                                : moved
+                                  ? ` · ${delta > 0 ? '+' : '−'}${num(Math.abs(delta), decimals)} since last`
+                                  : ' · unchanged'}
                             </span>
                           </span>
                           <span className="trail row tight">
@@ -171,7 +180,7 @@ export default function Bloodwork() {
         <MarkerSheet
           title={marker.label}
           unit={marker.latest.unit}
-          decimals={marker.def?.decimals ?? 2}
+          decimals={displayDecimals(marker.latest.value, marker.def)}
           readings={marker.readings}
           onClose={() => setOpenMarker(null)}
         />
