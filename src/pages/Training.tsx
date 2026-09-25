@@ -15,7 +15,16 @@ import { advanced, planSummary, plannedTemplateId } from '@/lib/plan';
 import { formatDay, fromISODate, lastNDays, nowISO, relativeDay, toISODate, today } from '@/lib/date';
 import { addDays } from 'date-fns';
 import { duration, num, pluralize } from '@/lib/format';
-import { e1rm, MUSCLE_LABELS, setsByMuscle, TRAINING_WEIGHT_UNIT, workingSets, workoutDuration, workoutVolume } from '@/lib/training';
+import {
+  e1rm,
+  MUSCLE_LABELS,
+  setsByMuscle,
+  TRAINING_WEIGHT_UNIT,
+  workingSets,
+  workoutDuration,
+  workoutTitle,
+  workoutVolume,
+} from '@/lib/training';
 
 type Tab = 'sessions' | 'plan' | 'progress' | 'exercises';
 
@@ -111,7 +120,7 @@ export default function Training() {
             onClick={() => navigate(`/workout/${openWorkout.id}`)}
           >
             <span className="grow">
-              <strong>{openWorkout.name}</strong>
+              <strong>{workoutTitle(openWorkout)}</strong>
               <div className="tiny dim">Started {relativeDay(openWorkout.date)}</div>
             </span>
             <span className="btn primary sm">Resume</span>
@@ -344,7 +353,18 @@ function SessionsTab({ workouts }: { workouts: Workout[] }) {
                   {w.finishedAt ? '🏋️' : '⏱️'}
                 </span>
                 <span className="body">
-                  <span className="title">{w.name}</span>
+                  <span className="title">
+                    {workoutTitle(w)}
+                    {w.tags && w.tags.length > 0 && (
+                      <span className="tag-pills" style={{ marginLeft: 6 }}>
+                        {w.tags.map((tag) => (
+                          <span key={tag} className="tag-pill">
+                            {tag}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </span>
                   <span className="sub">
                     {formatDay(w.date)} · {pluralize(done.length, 'set')}
                     {secs ? ` · ${duration(secs)}` : w.finishedAt ? '' : ' · in progress'}

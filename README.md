@@ -76,6 +76,7 @@ npm run dev          # http://localhost:5173
 | `npm test` | Unit tests for the scheduling, projection, stats and formatting logic |
 | `npm run smoke` | Drives the built app in a real browser through every core flow |
 | `npm run smoke:sync` | Two browser profiles against a real server: shared data, deletions, offline catch-up |
+| `npm run smoke:tags` | Naming and tagging a session, and calendar legend consistency |
 | `npm run serve` | Serves a built `dist/` with the dependency-free static server |
 | `npm run icons` | Regenerates the PWA icon set |
 

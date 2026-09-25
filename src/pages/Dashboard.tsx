@@ -28,6 +28,7 @@ import { project, STATUS_LABEL } from '@/lib/inventory';
 import { dueDoses } from '@/lib/doses';
 import { advanced, plannedTemplateId } from '@/lib/plan';
 import { totalMacros } from '@/lib/nutrition';
+import { workoutTitle } from '@/lib/training';
 
 /** The landing screen: what is due today and where every area stands. */
 export default function Dashboard() {
@@ -252,7 +253,7 @@ export default function Dashboard() {
             className="btn primary block lg"
             onClick={() => navigate(`/workout/${openWorkout.id}`)}
           >
-            Resume “{openWorkout.name}”
+            Resume “{workoutTitle(openWorkout)}”
           </button>
         ) : (
           <>
@@ -282,7 +283,7 @@ export default function Dashboard() {
             )}
             {lastWorkout ? (
               <p className="tiny dim" style={{ marginTop: 'var(--sp-3)', marginBottom: 0 }}>
-                Last session: {lastWorkout.name} · {agoLabel(lastWorkout.date)}
+                Last session: {workoutTitle(lastWorkout)} · {agoLabel(lastWorkout.date)}
               </p>
             ) : (
               <p className="tiny dim" style={{ marginTop: 'var(--sp-3)', marginBottom: 0 }}>

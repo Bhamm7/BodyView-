@@ -27,3 +27,5 @@ jobs:
         run: npm run smoke
       - name: Two-device sync test
         run: npm run smoke:sync
+      - name: Workout naming and tags test
+        run: npm run smoke:tags
