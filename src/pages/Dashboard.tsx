@@ -8,6 +8,7 @@ import { Page } from '@/components/Layout';
 import { Card, EmptyState, ProgressBar, Sheet, StatTile } from '@/components/ui';
 import { Sparkline } from '@/components/sparkline';
 import { DoseChecklist } from '@/components/DoseChecklist';
+import { SyncBanner } from '@/components/SyncBanner';
 import { MetricEntrySheet } from '@/components/MetricEntrySheet';
 import {
   useActiveProtocols,
@@ -130,6 +131,8 @@ export default function Dashboard() {
           </div>
         </Card>
       )}
+
+      <SyncBanner />
 
       <Card
         title="Today's doses"
