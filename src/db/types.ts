@@ -135,8 +135,18 @@ export interface Protocol {
   id: ID;
   compoundId: ID;
   name?: string;
+  /** Per administration, always — see doseBasis for how it was typed in. */
   dose: number;
   unit: DoseUnit;
+  /**
+   * How the dose was entered: per dose, per day, or per week.
+   *
+   * The stored `dose` is always per administration, because that is what the
+   * checklist, the stock projection and the adherence maths need. But someone
+   * who thinks of a compound as 160mg a week wants to see 160mg a week, so the
+   * basis is kept and the displays follow it.
+   */
+  doseBasis?: 'dose' | 'day' | 'week';
   schedule: Schedule;
   startDate: ISODate;
   /** Open-ended when omitted (e.g. an ongoing vitamin). */

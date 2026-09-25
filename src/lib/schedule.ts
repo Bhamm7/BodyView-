@@ -131,7 +131,17 @@ export interface DoseRate {
 export function doseRate(protocol: Protocol): DoseRate {
   const perDay = dailyAverageDose(protocol);
   const perWeek = perDay * 7;
-  const cadence: 'day' | 'week' = isDaily(protocol.schedule) ? 'day' : 'week';
+  // How it was entered wins: someone who typed a weekly total is telling you
+  // which number they think in. Failing that, daily schedules read per day and
+  // anything less frequent per week.
+  const cadence: 'day' | 'week' =
+    protocol.doseBasis === 'week'
+      ? 'week'
+      : protocol.doseBasis === 'day'
+        ? 'day'
+        : isDaily(protocol.schedule)
+          ? 'day'
+          : 'week';
   const unit = protocol.unit;
   const label = `${formatDose(cadence === 'day' ? perDay : perWeek, unit)}/${cadence}`;
   const other =

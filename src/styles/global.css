@@ -701,13 +701,20 @@ button.list-row:active { background: var(--surface-2); }
 
 .list-row .body { flex: 1; min-width: 0; display: block; }
 /* `.title` / `.sub` are spans on some screens and divs on others — force the
-   stacked layout either way. */
+   stacked layout either way. A title that asks to be a row keeps its row,
+   though: this rule is the more specific one and would otherwise flatten it. */
 .list-row .title { display: block; font-weight: 600; }
+.list-row .title.row { display: flex; }
 .list-row .sub { display: block; font-size: 0.8125rem; color: var(--text-3); }
 .list-row .trail { flex: 0 0 auto; text-align: right; }
 
-/* Colour key dot: identity marker beside a label, never identity on its own. */
+/* Colour key dot: identity marker beside a label, never identity on its own.
+   `inline-block` matters: an inline element ignores width and height, so in a
+   container that is not a flex row the dot would paint as a zero-width blob on
+   top of the text beside it. */
 .dot {
+  display: inline-block;
+  vertical-align: middle;
   width: 10px;
   height: 10px;
   border-radius: 50%;

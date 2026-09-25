@@ -59,6 +59,10 @@ export function DoseChecklist({
           const key = `${protocol.id}:${slot}`;
           const progress = protocolProgress(protocol, date);
           const rate = doseRate(protocol);
+          // "160 mg · 160 mg/day" says one thing twice. The rate earns its
+          // place only when it is a different number from the dose in hand.
+          const perDose = formatDose(protocol.dose, protocol.unit);
+          const showRate = rate.label !== `${perDose}/day`;
           const done = !!log && !log.skipped;
           const skipped = !!log?.skipped;
 
@@ -117,12 +121,16 @@ export function DoseChecklist({
                   <span className="truncate">{compound?.name ?? 'Unknown compound'}</span>
                 </div>
                 <div className="sub">
-                  {formatDose(protocol.dose, protocol.unit)}
+                  {perDose}
                   {protocol.schedule.timesPerDay > 1 ? ` · dose ${slot + 1}` : ''}
-                  {' · '}
-                  <span className="mono" title={rate.longLabel}>
-                    {rate.label}
-                  </span>
+                  {showRate && (
+                    <>
+                      {' · '}
+                      <span className="mono" title={rate.longLabel}>
+                        {rate.label}
+                      </span>
+                    </>
+                  )}
                   {' · '}
                   {progress.label}
                   {log && !skipped ? ` · ${formatTime(log.takenAt)}` : ''}

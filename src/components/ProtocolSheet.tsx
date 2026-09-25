@@ -23,6 +23,13 @@ const KINDS = [
 
 const LENGTH_PRESETS = [4, 6, 8, 10, 12, 16];
 
+/** The stored per-administration dose, expressed on the basis it was typed on. */
+function amountOnBasis(protocol: Protocol, basis: DoseBasis): number {
+  if (basis === 'dose') return protocol.dose;
+  const rate = doseRate(protocol);
+  return Number((basis === 'week' ? rate.perWeek : rate.perDay).toPrecision(6));
+}
+
 /**
  * What the amount in the dose field means. Injectables are usually prescribed
  * and discussed as a weekly total, orals and supplements per dose or per day,
@@ -75,9 +82,13 @@ export function ProtocolSheet({
     const seedId = protocol?.compoundId ?? presetCompoundId ?? compounds[0]?.id ?? '';
     setCompoundId(seedId);
     const seedCompound = compounds.find((c) => c.id === seedId);
-    setDose(protocol?.dose ?? seedCompound?.defaultDose ?? null);
+    setDose(
+      protocol
+        ? amountOnBasis(protocol, protocol.doseBasis ?? 'dose')
+        : (seedCompound?.defaultDose ?? null),
+    );
     setUnit(protocol?.unit ?? seedCompound?.defaultUnit ?? 'mg');
-    setBasis('dose');
+    setBasis(protocol?.doseBasis ?? 'dose');
     setScheduleTouched(false);
     setKind(protocol?.schedule.kind ?? 'everyNDays');
     setIntervalDays(protocol?.schedule.intervalDays ?? 1);
@@ -147,6 +158,7 @@ export function ProtocolSheet({
       compoundId,
       dose: perDose!,
       unit,
+      doseBasis: basis,
       schedule,
       startDate,
       endDate: endDate || undefined,

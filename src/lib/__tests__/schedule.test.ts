@@ -217,3 +217,38 @@ describe('dose basis', () => {
     assert.equal(rate.label, '160 mg/week');
   });
 });
+
+describe('doseRate follows how the dose was entered', () => {
+  it('quotes a weekly-entered protocol per week, even on a daily schedule', () => {
+    const p = protocol({ kind: 'everyNDays', intervalDays: 1, timesPerDay: 1 }, {
+      dose: 22.857,
+      doseBasis: 'week',
+    });
+    assert.equal(doseRate(p).cadence, 'week');
+    assert.equal(doseRate(p).label, '160 mg/week');
+  });
+
+  it('quotes a daily-entered protocol per day, even on a weekly schedule', () => {
+    const p = protocol({ kind: 'everyNDays', intervalDays: 7, timesPerDay: 1 }, {
+      dose: 70,
+      doseBasis: 'day',
+    });
+    assert.equal(doseRate(p).cadence, 'day');
+    assert.equal(doseRate(p).label, '10 mg/day');
+  });
+
+  it('falls back to the schedule when no basis was recorded', () => {
+    const weekly = protocol({ kind: 'everyNDays', intervalDays: 7, timesPerDay: 1 }, { dose: 160 });
+    assert.equal(doseRate(weekly).cadence, 'week');
+    const daily = protocol({ kind: 'everyNDays', intervalDays: 1, timesPerDay: 1 }, { dose: 5 });
+    assert.equal(doseRate(daily).cadence, 'day');
+  });
+
+  it('a per-dose entry still reads by its schedule', () => {
+    const p = protocol({ kind: 'weekdays', days: [1, 4], timesPerDay: 1 }, {
+      dose: 80,
+      doseBasis: 'dose',
+    });
+    assert.equal(doseRate(p).label, '160 mg/week');
+  });
+});
