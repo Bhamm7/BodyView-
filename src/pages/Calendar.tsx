@@ -13,6 +13,24 @@ import { isScheduledOn } from '@/lib/schedule';
 import { DaySummary } from './DayDetail';
 
 /**
+ * Day-marker colours, one per kind of event and used by both the grid and the
+ * legend, so the two can never drift apart.
+ */
+const DOT_WORKOUT = 'var(--c-1)';
+const DOT_METRICS = 'var(--c-3)';
+const DOT_FOOD = 'var(--c-4)';
+const DOT_BLOOD = 'var(--c-5)';
+const DOT_DOSE = 'var(--c-6)';
+
+const LEGEND: Array<{ color: string; label: string }> = [
+  { color: DOT_WORKOUT, label: 'Workout' },
+  { color: DOT_METRICS, label: 'Metrics' },
+  { color: DOT_FOOD, label: 'Food' },
+  { color: DOT_BLOOD, label: 'Bloodwork' },
+  { color: DOT_DOSE, label: 'Dose taken' },
+];
+
+/**
  * Month view. Each day shows what happened on it — doses, a workout, meals,
  * body metrics — so cycles and training blocks are visible at a glance.
  */
@@ -52,27 +70,31 @@ export default function Calendar() {
       return entry;
     };
 
+    // One fixed colour per kind of event. Colouring dose dots by compound put
+    // arbitrary hues on the grid — a yellow compound's dot was indistinguishable
+    // from the amber "Food" dot, so the legend appeared to be lying. Compound
+    // colour still identifies the scheduled-dose underline, which is a
+    // different shape and cannot be confused with a dot.
     for (const dose of doses) {
       if (dose.skipped) continue;
-      const color = compounds.get(dose.compoundId)?.color ?? 'var(--c-6)';
       const entry = get(dose.date);
-      if (!entry.dots.includes(color)) entry.dots.push(color);
+      if (!entry.dots.includes(DOT_DOSE)) entry.dots.push(DOT_DOSE);
     }
     for (const w of workouts) {
       const entry = get(w.date);
-      if (!entry.dots.includes('var(--c-1)')) entry.dots.push('var(--c-1)');
+      if (!entry.dots.includes(DOT_WORKOUT)) entry.dots.push(DOT_WORKOUT);
     }
     for (const m of meals) {
       const entry = get(m.date);
-      if (!entry.dots.includes('var(--c-4)')) entry.dots.push('var(--c-4)');
+      if (!entry.dots.includes(DOT_FOOD)) entry.dots.push(DOT_FOOD);
     }
     for (const m of metrics) {
       const entry = get(m.date);
-      if (!entry.dots.includes('var(--c-3)')) entry.dots.push('var(--c-3)');
+      if (!entry.dots.includes(DOT_METRICS)) entry.dots.push(DOT_METRICS);
     }
     for (const panel of blood) {
       const entry = get(panel.date);
-      if (!entry.dots.includes('var(--c-5)')) entry.dots.push('var(--c-5)');
+      if (!entry.dots.includes(DOT_BLOOD)) entry.dots.push(DOT_BLOOD);
     }
 
     // A stripe under the date marks a day a protocol schedules a dose on.
@@ -157,26 +179,15 @@ export default function Calendar() {
         </div>
 
         <div className="legend-row" style={{ marginTop: 'var(--sp-4)' }}>
+          {LEGEND.map(({ color, label }) => (
+            <span className="key" key={label}>
+              <i className="dot" style={{ background: color }} /> {label}
+            </span>
+          ))}
           <span className="key">
-            <i className="dot" style={{ background: 'var(--c-1)' }} /> Workout
+            <i style={{ width: 14, height: 3, borderRadius: 2, background: 'var(--text-3)' }} />
+            Dose scheduled (underline, in the compound's colour)
           </span>
-          <span className="key">
-            <i className="dot" style={{ background: 'var(--c-3)' }} /> Metrics
-          </span>
-          <span className="key">
-            <i className="dot" style={{ background: 'var(--c-4)' }} /> Food
-          </span>
-          <span className="key">
-            <i className="dot" style={{ background: 'var(--c-5)' }} /> Bloodwork
-          </span>
-          <span className="key">
-            <i className="dot" style={{ background: 'var(--text-3)' }} /> Dose taken
-          </span>
-          <span className="key">
-            <i style={{ width: 14, height: 3, borderRadius: 2, background: 'var(--text-3)' }} /> Dose
-            scheduled
-          </span>
-          <span className="key">Dose marks use each compound's own colour.</span>
         </div>
       </Card>
 

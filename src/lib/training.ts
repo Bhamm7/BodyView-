@@ -114,6 +114,30 @@ export function setLabel(set: SetLog, kind: Exercise['kind'], weightUnit: string
   return '—';
 }
 
+/**
+ * Quick tags for a session. A short fixed list on purpose — these are meant to
+ * be tapped mid-workout, and a longer list stops being one tap.
+ */
+export const TRAINING_TAGS = [
+  'Chest',
+  'Back',
+  'Legs',
+  'Arms',
+  'Shoulders',
+  'Core',
+  'Cardio',
+] as const;
+
+export type TrainingTag = (typeof TRAINING_TAGS)[number];
+
+/** A session's name, falling back to its tags when it was never named. */
+export function workoutTitle(workout: { name?: string; tags?: string[] }): string {
+  const name = workout.name?.trim();
+  if (name) return name;
+  if (workout.tags?.length) return workout.tags.join(' · ');
+  return 'Workout';
+}
+
 export const MUSCLE_LABELS: Record<string, string> = {
   chest: 'Chest',
   back: 'Back',

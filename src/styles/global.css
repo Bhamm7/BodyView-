@@ -1133,3 +1133,40 @@ table.data td.num, table.data th.num { text-align: right; }
 }
 
 .picker-option .opt-unit { margin-left: auto; color: var(--text-3); font-size: 0.75rem; }
+
+/* Session tags: a tappable row, sized for mid-workout use. */
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-row .chip {
+  min-height: 38px;
+  padding: 0 var(--sp-3);
+}
+
+/* Read-only tag pills, as shown on the day and calendar views. */
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--c-1) 16%, transparent);
+  color: var(--c-1);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.tag-pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  vertical-align: middle;
+}
+
+/* Stacked fields directly in a card need breathing room; ones inside a .grid
+   already get it from the grid gap. */
+.card > .field + .field { margin-top: var(--sp-3); }

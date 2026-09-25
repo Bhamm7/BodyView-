@@ -82,6 +82,7 @@ npm run dev          # http://localhost:5173
 | `npm run smoke:sync` | Two browser profiles against a real server: shared data, deletions, offline catch-up |
 | `npm run smoke:forms` | The stock and protocol sheets: validation, and the per-week/per-dose switch |
 | `npm run smoke:blood` | Importing a lab report through to charts and comparisons |
+| `npm run smoke:tags` | Naming and tagging a session, and calendar legend consistency |
 | `npm run serve` | Serves a built `dist/` with the dependency-free static server |
 | `npm run icons` | Regenerates the PWA icon set |
 

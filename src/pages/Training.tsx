@@ -17,6 +17,7 @@ import {
   setsByMuscle,
   workingSets,
   workoutDuration,
+  workoutTitle,
   workoutVolume,
 } from '@/lib/training';
 
@@ -91,7 +92,7 @@ export default function Training() {
             onClick={() => navigate(`/workout/${openWorkout.id}`)}
           >
             <span className="grow">
-              <strong>{openWorkout.name}</strong>
+              <strong>{workoutTitle(openWorkout)}</strong>
               <div className="tiny dim">Started {relativeDay(openWorkout.date)}</div>
             </span>
             <span className="btn primary sm">Resume</span>
@@ -170,7 +171,18 @@ function SessionsTab({ workouts }: { workouts: Workout[] }) {
                   {w.finishedAt ? '🏋️' : '⏱️'}
                 </span>
                 <span className="body">
-                  <span className="title">{w.name}</span>
+                  <span className="title">
+                    {workoutTitle(w)}
+                    {w.tags && w.tags.length > 0 && (
+                      <span className="tag-pills" style={{ marginLeft: 6 }}>
+                        {w.tags.map((tag) => (
+                          <span key={tag} className="tag-pill">
+                            {tag}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </span>
                   <span className="sub">
                     {formatDay(w.date)} · {pluralize(done.length, 'set')}
                     {secs ? ` · ${duration(secs)}` : w.finishedAt ? '' : ' · in progress'}

@@ -14,7 +14,7 @@ import { toDisplay, metricUnit } from '@/lib/metricUnits';
 import { markerDef } from '@/db/bloodMarkers';
 import { FLAG_LABEL, FLAG_TONE, flagFor } from '@/lib/blood';
 import { totalMacros } from '@/lib/nutrition';
-import { workingSets, workoutVolume } from '@/lib/training';
+import { workingSets, workoutTitle, workoutVolume } from '@/lib/training';
 
 /** Everything recorded on one day, and the doses still due. */
 export default function DayDetail() {
@@ -115,9 +115,25 @@ export function DaySummary({ date }: { date: ISODate }) {
         </div>
       )}
       {workouts.length > 0 && (
-        <div className="row tight">
+        <div className="row tight" style={{ alignItems: 'flex-start' }}>
           <span aria-hidden="true">🏋️</span>
-          <span className="muted">{workouts.map((w) => w.name).join(', ')}</span>
+          <span className="muted">
+            {workouts.map((w, i) => (
+              <span key={w.id}>
+                {i > 0 ? ', ' : ''}
+                {workoutTitle(w)}
+                {w.tags && w.tags.length > 0 && (
+                  <span className="tag-pills" style={{ marginLeft: 5 }}>
+                    {w.tags.map((tag) => (
+                      <span key={tag} className="tag-pill">
+                        {tag}
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </span>
+            ))}
+          </span>
         </div>
       )}
       {blood.length > 0 && (
@@ -265,7 +281,18 @@ function DayBody({ date }: { date: ISODate }) {
                     🏋️
                   </span>
                   <span className="body">
-                    <span className="title">{w.name}</span>
+                    <span className="title">
+                      {workoutTitle(w)}
+                      {w.tags && w.tags.length > 0 && (
+                        <span className="tag-pills" style={{ marginLeft: 6 }}>
+                          {w.tags.map((tag) => (
+                            <span key={tag} className="tag-pill">
+                              {tag}
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                    </span>
                     <span className="sub truncate">
                       {pluralize(workingSets(sets).length, 'set')} ·{' '}
                       {num(workoutVolume(sets), 0)} {settings.weightUnit}

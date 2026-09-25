@@ -2,13 +2,20 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, removeRecords, uid } from '@/db/db';
-import type { Exercise, SetLog } from '@/db/types';
+import type { Exercise, SetLog, Workout } from '@/db/types';
 import { Page } from '@/components/Layout';
 import { Card, EmptyState, Field, Sheet, useConfirm, useToast } from '@/components/ui';
 import { useExerciseMap, useExercises, useSettings } from '@/hooks/useData';
 import { formatDay, nowISO } from '@/lib/date';
 import { duration, num, pluralize } from '@/lib/format';
-import { e1rm, MUSCLE_LABELS, workingSets, workoutVolume } from '@/lib/training';
+import {
+  e1rm,
+  MUSCLE_LABELS,
+  TRAINING_TAGS,
+  workingSets,
+  workoutTitle,
+  workoutVolume,
+} from '@/lib/training';
 
 /**
  * The live session screen. Optimised for one-handed use between sets: large
@@ -91,7 +98,7 @@ export default function WorkoutSession() {
 
   return (
     <Page
-      title={workout.name}
+      title={workoutTitle(workout)}
       actions={
         workout.finishedAt ? (
           <button className="btn sm" onClick={() => db.workouts.update(workout.id, { finishedAt: undefined })}>
@@ -113,6 +120,8 @@ export default function WorkoutSession() {
           {num(volume, 0)} {settings.weightUnit}
         </span>
       </div>
+
+      <SessionHeader workout={workout} />
 
       {restFrom != null && <RestTimer startedAt={restFrom} onDismiss={() => setRestFrom(null)} />}
 
@@ -158,6 +167,74 @@ export default function WorkoutSession() {
       <ExercisePicker open={picking} onClose={() => setPicking(false)} onPick={addExercise} />
       {dialog}
     </Page>
+  );
+}
+
+/**
+ * Name and tags for the session.
+ *
+ * The name saves as you type — a workout is edited mid-session with sweaty
+ * hands, and a Save button is one more thing to forget before locking the
+ * phone. Tags are single taps for the same reason.
+ */
+function SessionHeader({ workout }: { workout: Workout }) {
+  const [name, setName] = useState(workout.name);
+
+  // Follow the record when it changes elsewhere (another device syncing, say),
+  // but never yank the field out from under someone mid-edit.
+  const editing = useRef(false);
+  useEffect(() => {
+    if (!editing.current) setName(workout.name);
+  }, [workout.name]);
+
+  const tags = workout.tags ?? [];
+
+  const toggleTag = (tag: string) => {
+    const next = tags.includes(tag) ? tags.filter((t) => t !== tag) : [...tags, tag];
+    void db.workouts.update(workout.id, { tags: next });
+  };
+
+  return (
+    <Card className="section">
+      <Field label="Session name">
+        <input
+          className="input"
+          value={name}
+          placeholder="Push day, Legs, Upper A…"
+          onFocus={() => {
+            editing.current = true;
+          }}
+          onChange={(e) => {
+            setName(e.target.value);
+            void db.workouts.update(workout.id, { name: e.target.value });
+          }}
+          onBlur={() => {
+            editing.current = false;
+            const trimmed = name.trim();
+            if (trimmed !== name) {
+              setName(trimmed);
+              void db.workouts.update(workout.id, { name: trimmed });
+            }
+          }}
+        />
+      </Field>
+
+      <Field label="Tags">
+        <div className="tag-row">
+          {TRAINING_TAGS.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              className="chip"
+              aria-pressed={tags.includes(tag)}
+              onClick={() => toggleTag(tag)}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      </Field>
+    </Card>
   );
 }
 

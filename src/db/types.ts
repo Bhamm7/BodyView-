@@ -317,6 +317,8 @@ export interface Workout {
   id: ID;
   date: ISODate;
   name: string;
+  /** Muscle groups / session type, from TRAINING_TAGS. */
+  tags?: string[];
   templateId?: ID;
   startedAt: ISODateTime;
   finishedAt?: ISODateTime;
