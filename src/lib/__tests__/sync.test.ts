@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
+import type { SyncState } from '@/db/sync-types';
 import { describe, it } from 'node:test';
-import { normalizeServerUrl } from '../sync';
+import { normalizeServerUrl, shouldAutoConnect } from '../sync';
 
 describe('normalizeServerUrl', () => {
   it('keeps an explicit scheme', () => {
@@ -39,5 +40,43 @@ describe('normalizeServerUrl', () => {
     assert.equal(normalizeServerUrl('   '), '');
     assert.equal(normalizeServerUrl('http://', 'http'), '');
     assert.equal(normalizeServerUrl('https://'), '');
+  });
+});
+
+describe('shouldAutoConnect', () => {
+  const state = (over: Partial<SyncState> = {}): SyncState => ({
+    id: 'state',
+    serverUrl: '',
+    enabled: false,
+    lastSyncedAt: 0,
+    lastPushedAt: 0,
+    ...over,
+  });
+
+  it('attaches a fresh device to the server that served it', () => {
+    assert.equal(shouldAutoConnect(state(), 'http://192.168.1.155:8787'), true);
+    assert.equal(shouldAutoConnect(state(), 'https://mini.tailnet.ts.net'), true);
+  });
+
+  it('leaves a device that is already connected alone', () => {
+    assert.equal(
+      shouldAutoConnect(state({ enabled: true, serverUrl: 'http://192.168.1.155:8787' }), 'http://192.168.1.155:8787'),
+      false,
+    );
+  });
+
+  it('respects a deliberate disconnect', () => {
+    assert.equal(shouldAutoConnect(state({ declinedAutoConnect: true }), 'http://192.168.1.155:8787'), false);
+  });
+
+  it('reconnects a device whose sync was turned off without being declined', () => {
+    // enabled:false with a url and no decline is how a failed setup looks.
+    assert.equal(shouldAutoConnect(state({ serverUrl: 'http://x:8787' }), 'http://x:8787'), true);
+  });
+
+  it('does nothing when the app was not served over the network', () => {
+    assert.equal(shouldAutoConnect(state(), 'file://'), false);
+    assert.equal(shouldAutoConnect(state(), 'null'), false);
+    assert.equal(shouldAutoConnect(state(), ''), false);
   });
 });

@@ -280,6 +280,42 @@ export async function replaceLocalWithServer(): Promise<SyncOutcome> {
 }
 
 /** Whether this device has sync switched on and pointed somewhere. */
+/**
+ * Whether a device should attach itself to the server that served it.
+ *
+ * The app is downloaded from the same machine that holds the database, so
+ * asking each device for that machine's address is asking for something it
+ * already knows. It connects itself unless it is already connected, was
+ * deliberately disconnected, or was not served over the network at all.
+ */
+export function shouldAutoConnect(state: SyncState, origin: string): boolean {
+  if (state.enabled && state.serverUrl) return false;
+  if (state.declinedAutoConnect) return false;
+  return /^https?:\/\//.test(origin);
+}
+
+/**
+ * Connects to the serving origin when it answers as a BodyView server.
+ *
+ * A server that wants a token is left alone: a token cannot be guessed, and
+ * the banner on Today asks for it instead. Any other failure — offline, a
+ * static host, someone else's server — simply leaves the device local, which
+ * is what it already was.
+ */
+export async function autoConnectToOrigin(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  const state = await getSyncState();
+  const origin = window.location.origin;
+  if (!shouldAutoConnect(state, origin)) return false;
+
+  const base = normalizeServerUrl(origin);
+  const probe = await testConnection(base);
+  if (!probe.ok) return false;
+
+  await setSyncState({ serverUrl: base, enabled: true, declinedAutoConnect: false });
+  return true;
+}
+
 export async function isSyncConfigured(): Promise<boolean> {
   const state = await getSyncState();
   return state.enabled && !!state.serverUrl;

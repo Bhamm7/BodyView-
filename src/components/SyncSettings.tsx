@@ -63,7 +63,7 @@ export function SyncSettings() {
       'Disconnect',
     );
     if (!ok) return;
-    await setSyncState({ enabled: false });
+    await setSyncState({ enabled: false, declinedAutoConnect: true });
     toast.show('Sync turned off');
   };
 

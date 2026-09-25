@@ -30,4 +30,10 @@ export interface SyncState {
   /** Wall-clock time of the last successful sync, for the UI. */
   lastSuccessAt?: number;
   lastError?: string;
+  /**
+   * The user turned sync off on this device on purpose. Without this a device
+   * would silently reconnect itself to the server that served it on the next
+   * load, which is the opposite of what disconnecting meant.
+   */
+  declinedAutoConnect?: boolean;
 }

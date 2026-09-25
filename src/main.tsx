@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './styles/global.css';
 import { seedIfEmpty, topUpCatalogue } from './db/seed';
-import { isSyncConfigured, sync } from './lib/sync';
+import { autoConnectToOrigin, isSyncConfigured, sync } from './lib/sync';
 
 /**
  * On a device that already syncs, pull first: the catalogues come down from the
@@ -12,6 +12,9 @@ import { isSyncConfigured, sync } from './lib/sync';
  */
 async function boot() {
   try {
+    // Before seeding: a device that attaches itself to the server should pull
+    // the shared catalogues rather than invent its own set beside them.
+    await autoConnectToOrigin();
     if (await isSyncConfigured()) await sync();
   } catch (err) {
     console.error('Initial sync failed', err);
