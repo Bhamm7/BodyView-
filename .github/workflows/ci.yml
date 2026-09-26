@@ -33,3 +33,5 @@ jobs:
         run: npm run smoke:blood
       - name: Workout naming and tags test
         run: npm run smoke:tags
+      - name: Keyboard and focus test
+        run: npm run smoke:keyboard

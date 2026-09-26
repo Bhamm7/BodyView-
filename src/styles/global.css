@@ -1187,3 +1187,38 @@ table.data td.num, table.data th.num { text-align: right; }
   min-height: 40px;
   font-size: 15px;
 }
+
+/* ----------------------------------------------------- keyboard handling -- */
+
+/*
+ * Leaves room when the browser scrolls a field into view of its own accord —
+ * enough to clear the sticky header and the tab bar.
+ */
+.input,
+.textarea,
+.select,
+input,
+textarea,
+select {
+  scroll-margin-top: calc(var(--header-h) + var(--safe-top) + 12px);
+  scroll-margin-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 12px);
+}
+
+/*
+ * While the keyboard is up the tab bar is unreachable anyway, and a fixed
+ * element sitting over the focused field is what makes iOS fight the scroll
+ * position. Take it out of the way and give the space back to the form.
+ */
+:root[data-keyboard-open] .tabbar,
+:root[data-keyboard-open] .fab {
+  display: none;
+}
+
+:root[data-keyboard-open] .app-main {
+  padding-bottom: var(--sp-6);
+}
+
+/* A sheet has its own scroll area; keep its body clear of the keyboard. */
+:root[data-keyboard-open] .sheet {
+  max-height: calc(100dvh - var(--keyboard-inset, 0px) - 8px);
+}

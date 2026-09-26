@@ -2,6 +2,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useEffect, type ReactNode } from 'react';
 import { useSettings } from '@/hooks/useData';
 import { useAutoSync } from '@/hooks/useSync';
+import { useKeyboardInsets } from '@/hooks/useKeyboardInsets';
 
 interface NavItem {
   to: string;
@@ -37,6 +38,8 @@ export function Layout() {
   useTheme();
   // Mounted once here so the whole app stays in step with the server.
   useAutoSync();
+  // Keeps whatever field you are typing in clear of the keyboard and tab bar.
+  useKeyboardInsets();
   const { pathname } = useLocation();
 
   // A fresh route should start at the top, not wherever the last one was.

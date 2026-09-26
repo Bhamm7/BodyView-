@@ -7,6 +7,8 @@ dist-ssr/
 .smoke-forms/
 .smoke-blood/
 .smoke-tags/
+.smoke-keyboard/
+.probe/
 data/
 *.db
 *.db-wal
