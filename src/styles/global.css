@@ -1170,3 +1170,20 @@ table.data td.num, table.data th.num { text-align: right; }
 /* Stacked fields directly in a card need breathing room; ones inside a .grid
    already get it from the grid gap. */
 .card > .field + .field { margin-top: var(--sp-3); }
+
+/* Per-exercise setup note: present but never competing with the set table. */
+.exercise-note-add {
+  color: var(--text-3);
+  font-weight: 600;
+  margin-bottom: var(--sp-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  text-align: left;
+}
+
+.input.exercise-note {
+  min-height: 40px;
+  font-size: 15px;
+}

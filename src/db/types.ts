@@ -323,7 +323,14 @@ export interface Workout {
   startedAt: ISODateTime;
   finishedAt?: ISODateTime;
   bodyweight?: number;
+  /** How the session went: how you felt, equipment you could not get. */
   notes?: string;
+  /**
+   * Per-exercise notes, keyed by the block's `order` within this workout —
+   * setup details like shoe choice, wedge height or depth, which belong to the
+   * movement for the whole session rather than to one set.
+   */
+  exerciseNotes?: Record<string, string>;
   /** Session RPE 1-10. */
   rpe?: number;
 }

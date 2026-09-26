@@ -11,6 +11,7 @@ import { duration, num, pluralize } from '@/lib/format';
 import {
   e1rm,
   MUSCLE_LABELS,
+  nextBlockOrder,
   TRAINING_TAGS,
   workingSets,
   workoutTitle,
@@ -39,6 +40,7 @@ export default function WorkoutSession() {
   );
   const exercises = useExerciseMap();
   const allSets = useLiveQuery(() => db.sets.toArray(), [], []) ?? [];
+  const allWorkouts = useLiveQuery(() => db.workouts.toArray(), [], []) ?? [];
 
   // Group the session's sets by exercise, preserving the order they were added.
   const groups = useMemo(() => {
@@ -56,6 +58,37 @@ export default function WorkoutSession() {
   const done = workingSets(sets);
   const volume = workoutVolume(sets);
 
+  /**
+   * The note left against this exercise last time it was trained. Setup
+   * details are the sort of thing you want to repeat rather than rediscover,
+   * so they are offered as the placeholder for the empty field.
+   */
+  const previousNotes = useMemo(() => {
+    const byExercise = new Map<string, string>();
+    if (!workout) return byExercise;
+
+    const dateOf = new Map(allWorkouts.map((w) => [w.id, w.date]));
+    const candidates = allSets.filter(
+      (s) => s.workoutId !== workout.id && dateOf.has(s.workoutId),
+    );
+
+    for (const set of candidates) {
+      const priorWorkout = allWorkouts.find((w) => w.id === set.workoutId);
+      const note = priorWorkout?.exerciseNotes?.[String(set.order)]?.trim();
+      if (!note) continue;
+
+      const existing = byExercise.get(set.exerciseId);
+      if (!existing) {
+        byExercise.set(set.exerciseId, note);
+        continue;
+      }
+      // Keep the most recent one.
+      const bestDate = allWorkouts.find((w) => w.exerciseNotes?.[String(set.order)] === existing)?.date ?? '';
+      if ((priorWorkout?.date ?? '') > bestDate) byExercise.set(set.exerciseId, note);
+    }
+    return byExercise;
+  }, [allSets, allWorkouts, workout]);
+
   if (!workout) {
     return (
       <Page title="Workout">
@@ -69,7 +102,7 @@ export default function WorkoutSession() {
   }
 
   const addExercise = async (exercise: Exercise) => {
-    const order = groups.length;
+    const order = nextBlockOrder(groups.map((g) => g.order));
     await db.sets.add({
       id: uid(),
       workoutId: workout.id,
@@ -148,6 +181,13 @@ export default function WorkoutSession() {
             workoutId={workout.id}
             allSets={allSets}
             weightUnit={settings.weightUnit}
+            note={workout.exerciseNotes?.[String(group.order)] ?? ''}
+            previousNote={previousNotes.get(group.exerciseId)}
+            onNoteChange={(value) =>
+              db.workouts.update(workout.id, {
+                exerciseNotes: { ...(workout.exerciseNotes ?? {}), [String(group.order)]: value },
+              })
+            }
             onRest={() => setRestFrom(Date.now())}
             onRemove={async () => {
               const ok = await confirm('Remove this exercise and its sets?', 'Remove');
@@ -163,6 +203,8 @@ export default function WorkoutSession() {
           + Add exercise
         </button>
       )}
+
+      <SessionNotes workout={workout} />
 
       <ExercisePicker open={picking} onClose={() => setPicking(false)} onPick={addExercise} />
       {dialog}
@@ -238,12 +280,54 @@ function SessionHeader({ workout }: { workout: Workout }) {
   );
 }
 
+/**
+ * How the session went. Sits at the end because that is when it gets written —
+ * how you felt, what was occupied, anything worth knowing next time.
+ */
+function SessionNotes({ workout }: { workout: Workout }) {
+  const [draft, setDraft] = useState(workout.notes ?? '');
+  const editing = useRef(false);
+
+  useEffect(() => {
+    if (!editing.current) setDraft(workout.notes ?? '');
+  }, [workout.notes]);
+
+  return (
+    <Card title="Session notes" className="section">
+      <textarea
+        className="textarea"
+        value={draft}
+        placeholder="How it felt, energy, sleep, machines you couldn't get, anything to remember next time…"
+        aria-label="Session notes"
+        onFocus={() => {
+          editing.current = true;
+        }}
+        onChange={(e) => {
+          setDraft(e.target.value);
+          void db.workouts.update(workout.id, { notes: e.target.value });
+        }}
+        onBlur={() => {
+          editing.current = false;
+          const trimmed = draft.trim();
+          if (trimmed !== draft) {
+            setDraft(trimmed);
+            void db.workouts.update(workout.id, { notes: trimmed });
+          }
+        }}
+      />
+    </Card>
+  );
+}
+
 function ExerciseBlock({
   group,
   exercise,
   workoutId,
   allSets,
   weightUnit,
+  note,
+  previousNote,
+  onNoteChange,
   onRest,
   onRemove,
 }: {
@@ -252,6 +336,9 @@ function ExerciseBlock({
   workoutId: string;
   allSets: SetLog[];
   weightUnit: string;
+  note: string;
+  previousNote?: string;
+  onNoteChange: (value: string) => void;
   onRest: () => void;
   onRemove: () => void;
 }) {
@@ -320,6 +407,8 @@ function ExerciseBlock({
         </tbody>
       </table>
 
+      <ExerciseNote note={note} previousNote={previousNote} onChange={onNoteChange} />
+
       <div className="row tight">
         <button className="btn sm grow" onClick={addSet}>
           + Set
@@ -339,6 +428,76 @@ function ExerciseBlock({
         )}
       </div>
     </Card>
+  );
+}
+
+/**
+ * Setup notes for one exercise in this session — shoes, wedges, depth, seat
+ * position. Saved as you type, and collapsed to a single line until needed so
+ * it never competes with the set table.
+ */
+function ExerciseNote({
+  note,
+  previousNote,
+  onChange,
+}: {
+  note: string;
+  previousNote?: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(!!note);
+  const [draft, setDraft] = useState(note);
+  const editing = useRef(false);
+
+  useEffect(() => {
+    if (!editing.current) setDraft(note);
+  }, [note]);
+
+  if (!open) {
+    return (
+      <button
+        className="btn ghost sm block exercise-note-add"
+        onClick={() => setOpen(true)}
+        style={{ justifyContent: 'flex-start' }}
+      >
+        + Note{previousNote ? ` · last time: ${previousNote}` : ''}
+      </button>
+    );
+  }
+
+  return (
+    <div className="field" style={{ marginBottom: 'var(--sp-3)' }}>
+      <input
+        className="input exercise-note"
+        value={draft}
+        placeholder={previousNote ? `Last time: ${previousNote}` : 'Shoes, wedges, depth, seat…'}
+        aria-label="Exercise note"
+        autoFocus={!note}
+        onFocus={() => {
+          editing.current = true;
+        }}
+        onChange={(e) => {
+          setDraft(e.target.value);
+          onChange(e.target.value);
+        }}
+        onBlur={() => {
+          editing.current = false;
+          if (!draft.trim()) setOpen(false);
+        }}
+      />
+      {previousNote && draft !== previousNote && (
+        <button
+          className="btn ghost sm"
+          style={{ alignSelf: 'flex-start' }}
+          onClick={() => {
+            setDraft(previousNote);
+            onChange(previousNote);
+          }}
+        >
+          Use last time's: {previousNote}
+        </button>
+      )}
+    </div>
   );
 }
 

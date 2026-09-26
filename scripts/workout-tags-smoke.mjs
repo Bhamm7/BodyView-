@@ -93,6 +93,54 @@ const run = async () => {
   await page.getByLabel('Mark set as done').first().click();
   await page.waitForTimeout(600);
 
+  console.log('\nPer-exercise and session notes');
+  // Add a second exercise so the ordering fix is exercised for real.
+  await page.getByRole('button', { name: /Add exercise/ }).first().click();
+  await page.locator('.sheet').waitFor();
+  await page.locator('.sheet input').first().fill('lateral raise');
+  await page.waitForTimeout(400);
+  await page.locator('.sheet .list-row').first().click();
+  await page.waitForTimeout(500);
+  check('two exercises are two blocks', (await page.locator('table.data').count()) === 2,
+    `${await page.locator('table.data').count()} blocks`);
+
+  // Remove the first, add a third: the old code reused a live order here and
+  // merged them into one block.
+  await page.locator('button[aria-label="Remove exercise"]').first().click();
+  await page.locator('.sheet').waitFor();
+  await page.locator('.sheet').getByRole('button', { name: 'Remove' }).click();
+  await page.waitForTimeout(600);
+  await page.getByRole('button', { name: /Add exercise/ }).first().click();
+  await page.locator('.sheet').waitFor();
+  await page.locator('.sheet input').first().fill('triceps pushdown');
+  await page.waitForTimeout(400);
+  await page.locator('.sheet .list-row').first().click();
+  await page.waitForTimeout(600);
+  const blocksNow = await page.locator('table.data').count();
+  check('removing then adding does not merge blocks', blocksNow === 2, `${blocksNow} blocks`);
+
+  await page.locator('.exercise-note-add').first().click();
+  await page.waitForTimeout(300);
+  await page.locator('.input.exercise-note').first().fill('Platform shoes, 2 wedges, to depth');
+  await page.waitForTimeout(600);
+
+  await page.locator('textarea[aria-label="Session notes"]').fill(
+    'Felt strong. Squat rack taken, used the other side.',
+  );
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: `${SHOTS}/02b-notes.png`, fullPage: true });
+
+  await page.reload();
+  await page.waitForTimeout(1200);
+  check(
+    'the exercise note persisted',
+    (await page.locator('.input.exercise-note').first().inputValue()) === 'Platform shoes, 2 wedges, to depth',
+  );
+  check(
+    'the session notes persisted',
+    /Squat rack taken/.test(await page.locator('textarea[aria-label="Session notes"]').inputValue()),
+  );
+
   console.log('\nTraining list');
   await page.goto(`${BASE}/#/training`);
   await page.waitForTimeout(1000);
@@ -109,6 +157,7 @@ const run = async () => {
   check('the day view shows the tags', /Chest/.test(day) && /Shoulders/.test(day));
   const pills = await page.locator('.tag-pill').count();
   check('tags render as pills', pills >= 2, `${pills} pills`);
+  check('the day view shows the session notes', /Squat rack taken/.test(day), '');
   await page.screenshot({ path: `${SHOTS}/03-day.png`, fullPage: true });
 
   console.log('\nCalendar');

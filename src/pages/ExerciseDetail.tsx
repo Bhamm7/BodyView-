@@ -49,14 +49,20 @@ export default function ExerciseDetail() {
       byWorkout.set(s.workoutId, list);
     }
     return [...byWorkout.entries()]
-      .map(([workoutId, list]) => ({
-        workoutId,
-        date: dateOf.get(workoutId) ?? '',
-        sets: list.sort((a, b) => a.setIndex - b.setIndex),
-      }))
+      .map(([workoutId, list]) => {
+        const ordered = list.sort((a, b) => a.setIndex - b.setIndex);
+        const workout = workouts.find((w) => w.id === workoutId);
+        return {
+          workoutId,
+          date: dateOf.get(workoutId) ?? '',
+          sets: ordered,
+          // Keyed by the block's order within that session.
+          note: workout?.exerciseNotes?.[String(ordered[0]?.order)]?.trim(),
+        };
+      })
       .filter((h) => h.date)
       .sort((a, b) => b.date.localeCompare(a.date));
-  }, [sets, dateOf]);
+  }, [sets, dateOf, workouts]);
 
   if (!exercise) {
     return (
@@ -153,6 +159,11 @@ export default function ExerciseDetail() {
                         .map((s) => setLabel(s, exercise.kind, settings.weightUnit))
                         .join('  ·  ') || 'No completed sets'}
                     </span>
+                    {h.note && (
+                      <span className="sub" style={{ whiteSpace: 'normal', marginTop: 2 }}>
+                        📝 {h.note}
+                      </span>
+                    )}
                   </span>
                 </div>
               ))}

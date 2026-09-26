@@ -130,6 +130,17 @@ export const TRAINING_TAGS = [
 
 export type TrainingTag = (typeof TRAINING_TAGS)[number];
 
+/**
+ * The `order` a newly added exercise should take within a session.
+ *
+ * One past the highest in use, not the count of blocks: after an exercise is
+ * removed those differ, and reusing a live order merges two different
+ * exercises into a single block.
+ */
+export function nextBlockOrder(existingOrders: number[]): number {
+  return Math.max(-1, ...existingOrders) + 1;
+}
+
 /** A session's name, falling back to its tags when it was never named. */
 export function workoutTitle(workout: { name?: string; tags?: string[] }): string {
   const name = workout.name?.trim();

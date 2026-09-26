@@ -131,6 +131,7 @@ export function DaySummary({ date }: { date: ISODate }) {
                     ))}
                   </span>
                 )}
+                {w.notes && <span title={w.notes}> 📝</span>}
               </span>
             ))}
           </span>
@@ -298,6 +299,11 @@ function DayBody({ date }: { date: ISODate }) {
                       {num(workoutVolume(sets), 0)} {settings.weightUnit}
                       {top.length ? ` · ${top.join(', ')}` : ''}
                     </span>
+                    {w.notes && (
+                      <span className="sub" style={{ whiteSpace: 'normal', marginTop: 4 }}>
+                        📝 {w.notes}
+                      </span>
+                    )}
                   </span>
                   <span className="trail dim">›</span>
                 </button>
