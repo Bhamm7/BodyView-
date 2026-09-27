@@ -14,7 +14,8 @@
     "smoke": "node scripts/smoke.mjs",
     "serve": "node server/serve.mjs",
     "smoke:sync": "node scripts/sync-smoke.mjs",
-    "smoke:tags": "node scripts/workout-tags-smoke.mjs"
+    "smoke:tags": "node scripts/workout-tags-smoke.mjs",
+    "smoke:update": "node scripts/update-banner-smoke.mjs"
   },
   "dependencies": {
     "date-fns": "^4.1.0",

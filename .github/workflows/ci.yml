@@ -29,3 +29,5 @@ jobs:
         run: npm run smoke:sync
       - name: Workout naming and tags test
         run: npm run smoke:tags
+      - name: Stale-version banner test
+        run: npm run smoke:update

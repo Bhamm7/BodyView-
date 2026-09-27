@@ -1084,3 +1084,26 @@ table.data td.num, table.data th.num { text-align: right; }
 /* Stacked fields directly in a card need breathing room; ones inside a .grid
    already get it from the grid gap. */
 .card > .field + .field { margin-top: var(--sp-3); }
+
+/* Tells you the page is behind the server, rather than leaving you to wonder. */
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin: var(--sp-3) calc(var(--sp-4) + var(--safe-right)) 0
+    calc(var(--sp-4) + var(--safe-left));
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+@media (min-width: 900px) {
+  .update-banner {
+    max-width: var(--content-max);
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

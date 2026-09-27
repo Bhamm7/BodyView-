@@ -5,6 +5,8 @@ dist-ssr/
 .smoke/
 .smoke-sync/
 .smoke-tags/
+.smoke-update/
+.probe/
 data/
 *.db
 *.db-wal
