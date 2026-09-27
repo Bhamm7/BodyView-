@@ -9,6 +9,7 @@ dist-ssr/
 .smoke-tags/
 .smoke-keyboard/
 .smoke-update/
+.smoke-recon/
 .probe/
 data/
 *.db

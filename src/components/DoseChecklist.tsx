@@ -3,8 +3,9 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/db';
 import type { DoseLog, ISODate } from '@/db/types';
 import { dueDoses, extraDoses, skipDose, takeDose, undoDose } from '@/lib/doses';
-import { useActiveProtocols, useCompoundMap } from '@/hooks/useData';
-import { dose as formatDose } from '@/lib/format';
+import { useActiveProtocols, useCompoundMap, useInventory } from '@/hooks/useData';
+import { concentrationOf, UNITS_PER_ML, unitsForDose } from '@/lib/reconstitution';
+import { dose as formatDose, num } from '@/lib/format';
 import { formatTime } from '@/lib/date';
 import { protocolProgress } from '@/lib/schedule';
 import { EmptyState, useToast } from './ui';
@@ -16,6 +17,32 @@ import { EmptyState, useToast } from './ui';
 export function DoseChecklist({ date, compact }: { date: ISODate; compact?: boolean }) {
   const protocols = useActiveProtocols();
   const compounds = useCompoundMap();
+  const inventory = useInventory();
+
+  /**
+   * How many syringe units each compound's dose comes to, where the vial in
+   * stock has been reconstituted. This is the number wanted at the moment of
+   * injection, and it is the whole reason the mix is recorded.
+   */
+  const unitsByCompound = useMemo(() => {
+    const out = new Map<string, { units: number; ml: number }>();
+    for (const item of inventory) {
+      if (!item.reconstitution) continue;
+      const concentration = concentrationOf(item.initial, item.unit, item.reconstitution.solventMl);
+      if (!concentration) continue;
+      const protocol = protocols.find((p) => p.compoundId === item.compoundId);
+      if (!protocol) continue;
+      const units = unitsForDose(
+        protocol.dose,
+        protocol.unit,
+        concentration,
+        item.reconstitution.unitsPerMl ?? UNITS_PER_ML,
+      );
+      if (units == null) continue;
+      out.set(item.compoundId, { units, ml: units / (item.reconstitution.unitsPerMl ?? UNITS_PER_ML) });
+    }
+    return out;
+  }, [inventory, protocols]);
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -92,6 +119,10 @@ export function DoseChecklist({ date, compact }: { date: ISODate; compact?: bool
                 </div>
                 <div className="sub">
                   {formatDose(protocol.dose, protocol.unit)}
+                  {(() => {
+                    const draw = unitsByCompound.get(protocol.compoundId);
+                    return draw ? ` · draw ${num(draw.units, 1)} units` : '';
+                  })()}
                   {protocol.schedule.timesPerDay > 1 ? ` · dose ${slot + 1}` : ''}
                   {' · '}
                   {progress.label}
