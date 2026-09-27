@@ -69,12 +69,23 @@ const MIME = {
 /**
  * Hashed build assets are immutable and cached hard. The shell, the service
  * worker and the manifest must be revalidated, or an update never lands.
+ *
+ * Decided by the file actually served, not by the requested path. Routing is
+ * hash-based, so the app is always loaded from "/" — which matches no rule
+ * about ".html" and used to fall through to an hour of caching. The shell was
+ * therefore the one file guaranteed to go stale, pointing at asset hashes that
+ * no longer existed, which is precisely the file that must not.
  */
-function cacheControl(pathname) {
+function cacheControl(pathname, filePath = '') {
+  const file = filePath.toLowerCase();
+
+  // The shell, under any URL that resolves to it.
+  if (file.endsWith('.html')) return 'no-cache';
+
   if (pathname.startsWith('/assets/')) return 'public, max-age=31536000, immutable';
   if (pathname === '/sw.js' || pathname === '/registerSW.js') return 'no-cache';
   if (pathname === '/version.json') return 'no-store';
-  if (pathname.endsWith('.webmanifest') || pathname.endsWith('.html')) return 'no-cache';
+  if (file.endsWith('.webmanifest')) return 'no-cache';
   return 'public, max-age=3600';
 }
 
@@ -142,14 +153,14 @@ const server = createServer(async (req, res) => {
   const etag = `W/"${file.size}-${Number(file.mtime)}"`;
 
   if (req.headers['if-none-match'] === etag) {
-    res.writeHead(304, { ETag: etag, 'Cache-Control': cacheControl(pathname) });
+    res.writeHead(304, { ETag: etag, 'Cache-Control': cacheControl(pathname, file.path) });
     return res.end();
   }
 
   const headers = {
     'Content-Type': type,
     'Content-Length': String(file.size),
-    'Cache-Control': cacheControl(pathname),
+    'Cache-Control': cacheControl(pathname, file.path),
     ETag: etag,
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'same-origin',

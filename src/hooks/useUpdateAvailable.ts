@@ -51,19 +51,45 @@ export function useUpdateAvailable(): { available: boolean; reload: () => void }
     };
   }, [check]);
 
+  /**
+   * Fetches the app afresh.
+   *
+   * Touches nothing belonging to the browser or the user: no cookies, no saved
+   * passwords or addresses, no autofill, and not the app's own database. Only
+   * this app's cached program files, plus a one-off query string so the request
+   * cannot be answered from cache.
+   */
   const reload = useCallback(() => {
-    // Clear any service-worker caches first, or a reload can be served the very
-    // build we are trying to leave behind.
-    const done = () => window.location.reload();
+    const go = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('v', Date.now().toString(36));
+      window.location.replace(url.toString());
+    };
+
+    const jobs: Array<Promise<unknown>> = [];
+
+    // Service-worker caches only — CacheStorage for this origin.
     if ('caches' in window) {
-      void caches
-        .keys()
-        .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
-        .catch(() => undefined)
-        .then(done);
-    } else {
-      done();
+      jobs.push(
+        caches
+          .keys()
+          .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+          .catch(() => undefined),
+      );
     }
+
+    // A worker from an earlier install would otherwise keep serving the old
+    // build however many times the page is reloaded.
+    if (navigator.serviceWorker?.getRegistrations) {
+      jobs.push(
+        navigator.serviceWorker
+          .getRegistrations()
+          .then((regs) => Promise.all(regs.map((reg) => reg.unregister())))
+          .catch(() => undefined),
+      );
+    }
+
+    void Promise.all(jobs).then(go, go);
   }, []);
 
   return { available, reload };
