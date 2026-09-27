@@ -31,3 +31,5 @@ jobs:
         run: npm run smoke:tags
       - name: Stale-version banner test
         run: npm run smoke:update
+      - name: Reconstitution calculator test
+        run: npm run smoke:recon

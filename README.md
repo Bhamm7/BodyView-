@@ -20,7 +20,7 @@ either way.
 | **Food** | Macro targets, a searchable food library, per-meal logging, and calorie/protein trends against target. |
 | **Train** | Exercise library, a live session logger built for one-handed use between sets, personal records, estimated 1RM trends, weekly volume and sets per muscle group. |
 | **Calendar** | A month at a glance: which days had doses, workouts, meals and readings, plus which days a protocol schedules a dose on. Tap any day for the full picture. |
-| **Stock** | What you have on the shelf, and when it runs out — worked out from your active protocols rather than entered by hand. |
+| **Stock** | What you have on the shelf, and when it runs out — worked out from your active protocols rather than entered by hand. Records how a vial was reconstituted and turns that into draw volumes. |
 
 ### Importing bloodwork
 
@@ -60,6 +60,24 @@ which depends on the compound — the projection says so rather than guessing.
 Logging a dose draws it out of stock automatically and opens a sealed spare when
 the current one runs dry.
 
+### Reconstitution
+
+Peptides arrive as powder, and how much bacteriostatic water went into a
+particular vial is the thing you cannot remember three months later. Record it
+on the vial itself in **Stock** — mL of solvent, which solvent, and the date it
+was mixed — and the app works out the rest:
+
+- the **strength** of what is now in the vial (10 mg in 2 mL is 5 mg/mL)
+- the **draw volume** for each of your active protocols, and the same figure in
+  **insulin units** on a U-100 syringe (a 250 mcg dose is 0.05 mL, so 5 units)
+- roughly **how many doses** that vial holds
+
+The units figure assumes a U-100 syringe, which is what is stated on screen; on
+any other barrel read the mL. Where a conversion isn't defined — an IU dose out
+of a vial labelled in milligrams — it says so instead of showing a number.
+Mixed vials carry a badge on the stock list so the strength and mix date are
+visible without opening anything.
+
 ## Running it
 
 ```bash
@@ -78,6 +96,7 @@ npm run dev          # http://localhost:5173
 | `npm run smoke:sync` | Two browser profiles against a real server: shared data, deletions, offline catch-up |
 | `npm run smoke:tags` | Naming and tagging a session, and calendar legend consistency |
 | `npm run smoke:update` | The banner shown when the page is behind the server |
+| `npm run smoke:recon` | Reconstituting a vial: strength, draw volume and insulin units |
 | `npm run serve` | Serves a built `dist/` with the dependency-free static server |
 | `npm run icons` | Regenerates the PWA icon set |
 

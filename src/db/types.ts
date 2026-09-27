@@ -223,6 +223,24 @@ export interface LabResult {
 
 export type InventoryForm = 'vial' | 'capsule' | 'tablet' | 'powder' | 'liquid' | 'pen' | 'other';
 
+/**
+ * What went into a lyophilised vial, recorded when it was mixed.
+ *
+ * The concentration is derived rather than stored, so editing the vial's
+ * labelled amount or the solvent keeps everything consistent.
+ */
+export interface Reconstitution {
+  /** Millilitres of solvent added. */
+  solventMl: number;
+  /** What was used, e.g. bacteriostatic water. */
+  solvent?: string;
+  /** When it was mixed — relevant to how long it keeps. */
+  mixedOn?: ISODate;
+  /** Syringe markings, units per millilitre. U-100 insulin syringes are 100. */
+  unitsPerMl?: number;
+  notes?: string;
+}
+
 export interface InventoryItem {
   id: ID;
   compoundId: ID;
@@ -245,6 +263,8 @@ export interface InventoryItem {
   expiresOn?: ISODate;
   /** Warn when projected days remaining drops below this. */
   reorderDays?: number;
+  /** Present once the vial has been mixed; absent for anything ready-to-use. */
+  reconstitution?: Reconstitution;
   notes?: string;
 }
 
