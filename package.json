@@ -17,7 +17,8 @@
     "smoke:forms": "node scripts/forms-smoke.mjs",
     "smoke:blood": "node scripts/blood-smoke.mjs",
     "smoke:tags": "node scripts/workout-tags-smoke.mjs",
-    "smoke:keyboard": "node scripts/keyboard-smoke.mjs"
+    "smoke:keyboard": "node scripts/keyboard-smoke.mjs",
+    "smoke:update": "node scripts/update-banner-smoke.mjs"
   },
   "dependencies": {
     "date-fns": "^4.1.0",

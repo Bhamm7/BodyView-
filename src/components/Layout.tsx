@@ -3,6 +3,7 @@ import { useEffect, type ReactNode } from 'react';
 import { useSettings } from '@/hooks/useData';
 import { useAutoSync } from '@/hooks/useSync';
 import { useKeyboardInsets } from '@/hooks/useKeyboardInsets';
+import { useUpdateAvailable } from '@/hooks/useUpdateAvailable';
 
 interface NavItem {
   to: string;
@@ -40,6 +41,7 @@ export function Layout() {
   useAutoSync();
   // Keeps whatever field you are typing in clear of the keyboard and tab bar.
   useKeyboardInsets();
+  const update = useUpdateAvailable();
   const { pathname } = useLocation();
 
   // A fresh route should start at the top, not wherever the last one was.
@@ -65,6 +67,14 @@ export function Layout() {
       </nav>
 
       <div className="shell-body">
+        {update.available && (
+          <div className="update-banner" role="status">
+            <span className="grow">A newer version is on the server.</span>
+            <button className="btn primary sm" onClick={update.reload}>
+              Reload
+            </button>
+          </div>
+        )}
         <Outlet />
       </div>
 

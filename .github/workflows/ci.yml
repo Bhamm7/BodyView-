@@ -35,3 +35,5 @@ jobs:
         run: npm run smoke:tags
       - name: Keyboard and focus test
         run: npm run smoke:keyboard
+      - name: Stale-version banner test
+        run: npm run smoke:update
