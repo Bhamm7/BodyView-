@@ -352,10 +352,17 @@ without opening anything:
 curl -s http://localhost:8787/version.json
 ```
 
-The same value is shown in the app under **Settings → About**. If the app looks
-old, compare the two: the same commit means the build is current and your
-browser is showing a cached page (reload with Cmd-Shift-R or Ctrl-F5); a
-different commit means the rebuild has not happened yet.
+The same value is shown in the app under **Settings → About**.
+
+You should not have to work this out by hand: the app checks `/version.json`
+itself, and when the server is serving a different build it shows a banner with
+a **Reload** button. The same thing is available any time under **Settings →
+About → Fetch the latest version**.
+
+Reloading that way re-downloads the app and drops its own cached program files
+and any old service worker. It does not touch cookies, saved passwords,
+addresses or autofill, and it does not touch your BodyView data — there is
+never any reason to clear browsing data to get an update.
 
 `./scripts/macos-service.sh doctor` prints both, and flags the mismatch.
 

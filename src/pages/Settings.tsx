@@ -7,6 +7,7 @@ import { Card, Field, NumberInput, Segmented, useConfirm, useToast } from '@/com
 import { useSettings } from '@/hooks/useData';
 import { SyncSettings } from '@/components/SyncSettings';
 import { useSyncState } from '@/hooks/useSync';
+import { useUpdateAvailable } from '@/hooks/useUpdateAvailable';
 import {
   downloadBackup,
   importBackup,
@@ -19,6 +20,7 @@ import { num } from '@/lib/format';
 export default function SettingsPage() {
   const [settings, update] = useSettings();
   const syncState = useSyncState();
+  const appUpdate = useUpdateAvailable();
   const toast = useToast();
   const { confirm, dialog } = useConfirm();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -241,6 +243,16 @@ export default function SettingsPage() {
             <span className="dim tiny"> · built {new Date(__BUILD_TIME__).toLocaleString()}</span>
           </span>
         </div>
+        <button className="btn block" onClick={appUpdate.reload} style={{ marginBottom: 'var(--sp-3)' }}>
+          ↻ Fetch the latest version
+        </button>
+        <p className="tiny dim">
+          Re-downloads the app from the server. Your data, logins, saved addresses and autofill are
+          untouched — only this app's cached program files.
+        </p>
+
+        <hr className="divider" />
+
         <p className="small muted">
           BodyView is a personal tracker. It records what you enter and does the arithmetic — it
           does not give medical or dosing advice. Talk to a clinician about anything that matters.
