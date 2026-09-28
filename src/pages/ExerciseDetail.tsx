@@ -110,6 +110,14 @@ export default function ExerciseDetail() {
         </button>
       )}
 
+      {exercise.notes && (
+        <Card title="Notes">
+          <p className="small" style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+            {exercise.notes}
+          </p>
+        </Card>
+      )}
+
       <ExerciseSheet
         exercise={exercise}
         open={editing}

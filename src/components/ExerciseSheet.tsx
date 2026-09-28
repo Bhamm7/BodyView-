@@ -43,6 +43,7 @@ export function ExerciseSheet({
   const [kind, setKind] = useState<Exercise['kind']>('strength');
   const [equipment, setEquipment] = useState('');
   const [photo, setPhoto] = useState<string | undefined>(undefined);
+  const [notes, setNotes] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -51,6 +52,7 @@ export function ExerciseSheet({
     setKind(exercise?.kind ?? 'strength');
     setEquipment(exercise?.equipment ?? '');
     setPhoto(exercise?.photo);
+    setNotes(exercise?.notes ?? '');
   }, [open, exercise, initialName]);
 
   const save = async () => {
@@ -63,7 +65,7 @@ export function ExerciseSheet({
       equipment: equipment.trim() || undefined,
       photo,
       primary: exercise?.primary,
-      notes: exercise?.notes,
+      notes: notes.trim() || undefined,
       archived: exercise?.archived,
     };
     await db.exercises.put(record);
@@ -122,6 +124,19 @@ export function ExerciseSheet({
         label="Photo"
         hint="The machine, the seat height, where the pin goes — whatever you'd want to see next time"
       />
+
+      <Field
+        label="Notes"
+        hint="Setup and cues — seat 4, pins 11, elbows tucked. Shown while you log the exercise."
+      >
+        <textarea
+          className="textarea"
+          rows={3}
+          value={notes}
+          placeholder="Seat 4 · feet high on the platform · pause at the bottom"
+          onChange={(e) => setNotes(e.target.value)}
+        />
+      </Field>
       <Field label="Muscle group">
         <select
           className="select"

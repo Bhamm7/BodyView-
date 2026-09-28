@@ -256,6 +256,17 @@ function ExerciseBlock({
         </button>
       }
     >
+      {/* Setup and cues, where they are actually needed: standing at the
+          machine with the app open, not on the exercise's own page. */}
+      {exercise?.notes && (
+        <p
+          className="small muted"
+          style={{ margin: '0 0 var(--sp-3)', whiteSpace: 'pre-wrap' }}
+        >
+          {exercise.notes}
+        </p>
+      )}
+
       <table className="data" style={{ marginBottom: 'var(--sp-3)' }}>
         <thead>
           <tr>
