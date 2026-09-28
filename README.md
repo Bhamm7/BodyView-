@@ -97,6 +97,7 @@ npm run dev          # http://localhost:5173
 | `npm run smoke:tags` | Naming and tagging a session, and calendar legend consistency |
 | `npm run smoke:update` | The banner shown when the page is behind the server |
 | `npm run smoke:recon` | Reconstituting a vial: strength, draw volume and insulin units |
+| `npm run smoke:exercise-notes` | The setup note on an exercise, from the library through to mid-workout |
 | `npm run serve` | Serves a built `dist/` with the dependency-free static server |
 | `npm run icons` | Regenerates the PWA icon set |
 
