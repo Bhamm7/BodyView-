@@ -2,11 +2,8 @@ node_modules/
 dist/
 dist-ssr/
 .test-build/
-.smoke/
-.smoke-sync/
-.smoke-tags/
-.smoke-update/
-.smoke-recon/
+# Screenshot output from the browser smoke suites
+.smoke*/
 .probe/
 data/
 *.db
