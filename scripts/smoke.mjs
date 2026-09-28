@@ -75,7 +75,13 @@ const run = async () => {
   await go('/');
   await page.waitForSelector('.app-header');
   check('dashboard renders', await page.locator('.app-header h1').isVisible());
-  check('tab bar is present', (await page.locator('.tabbar a').count()) === 6);
+  // By label, not by count: a section that quietly drops out of the phone nav
+  // is unreachable there, however many tabs are left behind.
+  const tabs = await page.locator('.tabbar a').allInnerTexts();
+  const flat = tabs.map((t) => t.replace(/\s+/g, ' ').trim());
+  for (const section of ['Today', 'Health', 'Cycles', 'Blood', 'Food', 'Train', 'Calendar', 'Stock']) {
+    check(`${section} is reachable from the tab bar`, flat.some((t) => t.endsWith(section)), flat.join(' | '));
+  }
   await page.screenshot({ path: `${SHOTS}/01-dashboard.png`, fullPage: true });
 
   console.log('\nLog a weight reading');

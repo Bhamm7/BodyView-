@@ -20,7 +20,8 @@ export const NAV: NavItem[] = [
   { to: '/nutrition', label: 'Food', icon: '🍽️' },
   { to: '/training', label: 'Train', icon: '🏋️' },
   { to: '/calendar', label: 'Calendar', icon: '📅' },
-  { to: '/inventory', label: 'Stock', icon: '📦', secondary: true },
+  { to: '/inventory', label: 'Stock', icon: '📦' },
+  // Reached from the gear on Today; it does not need a thumb-sized target.
   { to: '/settings', label: 'Settings', icon: '⚙️', secondary: true },
 ];
 
