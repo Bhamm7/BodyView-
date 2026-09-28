@@ -105,15 +105,25 @@ export function Segmented<T extends string>({
 export function Field({
   label,
   hint,
+  required,
   children,
 }: {
   label: string;
   hint?: ReactNode;
+  /** Marks the label, so a disabled Save has a visible reason. */
+  required?: boolean;
   children: ReactNode;
 }) {
   return (
     <div className="field">
-      <label>{label}</label>
+      <label>
+        {label}
+        {required && (
+          <span className="req" aria-hidden="true">
+            *
+          </span>
+        )}
+      </label>
       {children}
       {hint && <span className="tiny dim">{hint}</span>}
     </div>

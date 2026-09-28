@@ -196,6 +196,8 @@ export default function WorkoutSession() {
         </button>
       )}
 
+      <SessionNotes workout={workout} />
+
       <ExercisePicker open={picking} onClose={() => setPicking(false)} onPick={addExercise} />
       {dialog}
 
@@ -273,6 +275,49 @@ function SessionHeader({ workout }: { workout: Workout }) {
           ))}
         </div>
       </Field>
+    </Card>
+  );
+}
+
+/**
+ * Notes for the session as a whole — how it felt, sleep, what was taken.
+ *
+ * Saved as you type rather than behind a button: a workout is edited with
+ * sweaty hands and a phone that locks itself, and a Save is one more thing to
+ * forget. The draft follows the record when it changes elsewhere, but never
+ * while the field has focus, so a sync cannot yank text out from under an edit.
+ */
+function SessionNotes({ workout }: { workout: Workout }) {
+  const [draft, setDraft] = useState(workout.notes ?? '');
+  const editing = useRef(false);
+
+  useEffect(() => {
+    if (!editing.current) setDraft(workout.notes ?? '');
+  }, [workout.notes]);
+
+  return (
+    <Card title="Session notes" className="section">
+      <textarea
+        className="textarea"
+        value={draft}
+        placeholder="How it felt, energy, sleep, machines you couldn't get, anything to remember next time…"
+        aria-label="Session notes"
+        onFocus={() => {
+          editing.current = true;
+        }}
+        onChange={(e) => {
+          setDraft(e.target.value);
+          void db.workouts.update(workout.id, { notes: e.target.value });
+        }}
+        onBlur={() => {
+          editing.current = false;
+          const trimmed = draft.trim();
+          if (trimmed !== draft) {
+            setDraft(trimmed);
+            void db.workouts.update(workout.id, { notes: trimmed });
+          }
+        }}
+      />
     </Card>
   );
 }

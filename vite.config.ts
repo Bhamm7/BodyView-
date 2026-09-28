@@ -13,11 +13,15 @@ import { writeFileSync, mkdirSync } from 'node:fs';
  * it checkable: in Settings, and at /version.json without opening a browser.
  */
 function buildStamp() {
-  let commit = 'unknown';
-  try {
-    commit = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
-  } catch {
-    // Built from a tarball or an export — no git available, and that is fine.
+  // An out-of-tree build (a copy of the sources, a CI cache) has no git to ask,
+  // so the commit can be handed in instead of being lost.
+  let commit = process.env.BODYVIEW_COMMIT?.trim() || 'unknown';
+  if (commit === 'unknown') {
+    try {
+      commit = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+    } catch {
+      // Built from a tarball or an export — no git available, and that is fine.
+    }
   }
   return { commit, builtAt: new Date().toISOString() };
 }

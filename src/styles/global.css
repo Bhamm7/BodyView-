@@ -1048,6 +1048,14 @@ table.data td.num, table.data th.num { text-align: right; }
   align-items: center;
   gap: 5px;
 }
+/* Required-field marker, so a disabled Save has a visible reason. */
+.field > label .req,
+.field .field-label .req {
+  color: var(--critical);
+  margin-left: 3px;
+  font-weight: 700;
+}
+
 /* Session tags: a tappable row, sized for mid-workout use. */
 .tag-row {
   display: flex;
