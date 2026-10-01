@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, uid } from '@/db/db';
@@ -15,9 +15,13 @@ import { advanced, planSummary, plannedTemplateId } from '@/lib/plan';
 import { formatDay, fromISODate, lastNDays, nowISO, relativeDay, toISODate, today } from '@/lib/date';
 import { addDays } from 'date-fns';
 import { duration, num, pluralize } from '@/lib/format';
+import { TrainingCalendar } from '@/components/TrainingCalendar';
 import {
   e1rm,
+  GROUP_COLOR,
   MUSCLE_LABELS,
+  TRAINING_GROUPS,
+  type TrainingTag,
   setsByMuscle,
   TRAINING_WEIGHT_UNIT,
   workingSets,
@@ -26,10 +30,11 @@ import {
   workoutVolume,
 } from '@/lib/training';
 
-type Tab = 'sessions' | 'plan' | 'progress' | 'exercises';
+type Tab = 'sessions' | 'calendar' | 'plan' | 'progress' | 'exercises';
 
 const TABS = [
   { value: 'sessions', label: 'Sessions' },
+  { value: 'calendar', label: 'Calendar' },
   { value: 'plan', label: 'Plan' },
   { value: 'progress', label: 'Progress' },
   { value: 'exercises', label: 'Exercises' },
@@ -63,12 +68,20 @@ export default function Training() {
     [plans, templateMap],
   );
 
-  const startWorkout = async (template?: WorkoutTemplate, plan?: TrainingPlan) => {
+  const startWorkout = async (
+    template?: WorkoutTemplate,
+    plan?: TrainingPlan,
+    group?: TrainingTag,
+  ) => {
     const id = uid();
     const workout: Workout = {
       id,
       date: today(),
-      name: template?.name ?? 'Workout',
+      // Naming a session for the group it trains is what makes a month of
+      // training readable later; the tag follows from the same answer rather
+      // than being a second thing to remember.
+      name: group ?? template?.name ?? 'Workout',
+      tags: group ? [group] : undefined,
       templateId: template?.id,
       startedAt: nowISO(),
     };
@@ -129,6 +142,7 @@ export default function Training() {
       )}
 
       {tab === 'sessions' && <SessionsTab workouts={workouts} />}
+      {tab === 'calendar' && <TrainingCalendar />}
       {tab === 'plan' && (
         <PlanTab
           plans={plans}
@@ -167,8 +181,21 @@ export default function Training() {
           </>
         )}
 
-        <button className="btn primary block lg" onClick={() => startWorkout()}>
-          Empty workout
+        <div className="card-title">What are you training?</div>
+        <div className="group-picker">
+          {TRAINING_GROUPS.map((group) => (
+            <button
+              key={group}
+              className="group-pick"
+              style={{ ['--group' as string]: GROUP_COLOR[group] } as CSSProperties}
+              onClick={() => startWorkout(undefined, undefined, group)}
+            >
+              {group}
+            </button>
+          ))}
+        </div>
+        <button className="btn block" onClick={() => startWorkout()}>
+          Something else
         </button>
         {templates.length > 0 && (
           <>

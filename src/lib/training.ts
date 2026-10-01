@@ -140,6 +140,76 @@ export const TRAINING_TAGS = [
 
 export type TrainingTag = (typeof TRAINING_TAGS)[number];
 
+/**
+ * The body groups a session can be named for. The same list as the tags on
+ * purpose: naming a session "Legs" and tagging it Legs should not be two
+ * different facts that can disagree.
+ */
+export const TRAINING_GROUPS = TRAINING_TAGS;
+
+/**
+ * One fixed hue per group, in this order, validated against both surfaces for
+ * colourblind separation and contrast.
+ *
+ * Colour is reinforcement here, never the identity: seven categories cannot be
+ * told apart by hue alone when any two of them can land in neighbouring cells,
+ * so every coloured cell also carries its group's name. The hues give the month
+ * a rhythm you can read at a glance; the label says which group it actually is.
+ */
+export const GROUP_COLOR: Record<TrainingTag, string> = {
+  Chest: 'var(--c-1)',
+  Back: 'var(--c-2)',
+  Legs: 'var(--c-3)',
+  Arms: 'var(--c-4)',
+  Shoulders: 'var(--c-5)',
+  Core: 'var(--c-6)',
+  Cardio: 'var(--c-7)',
+};
+
+/** Fits a calendar cell, which is about five characters wide on a phone. */
+export const GROUP_SHORT: Record<TrainingTag, string> = {
+  Chest: 'Chest',
+  Back: 'Back',
+  Legs: 'Legs',
+  Arms: 'Arms',
+  Shoulders: 'Shldr',
+  Core: 'Core',
+  Cardio: 'Cardio',
+};
+
+/**
+ * Which body groups a session covers, read from its tags and its name.
+ *
+ * Sessions are now named for the group they train, but older ones were named
+ * freely and only tagged, so both are read — tags first, since they are the
+ * deliberate answer.
+ */
+export function workoutGroups(workout: { name?: string; tags?: string[] }): TrainingTag[] {
+  const out: TrainingTag[] = [];
+  const add = (value: string) => {
+    const match = TRAINING_GROUPS.find((g) => g.toLowerCase() === value.trim().toLowerCase());
+    if (match && !out.includes(match)) out.push(match);
+  };
+
+  for (const tag of workout.tags ?? []) add(tag);
+  // "Legs", "Leg day" and "Arms + Shoulders" all name their groups; "Push day"
+  // names none, and gets no colour rather than a guessed one.
+  for (const word of (workout.name ?? '').split(/[^\p{L}]+/u)) add(word);
+
+  return out;
+}
+
+/** How many sessions hit each group over a set of workouts. */
+export function groupCounts(
+  workouts: Array<{ name?: string; tags?: string[] }>,
+): Map<TrainingTag, number> {
+  const out = new Map<TrainingTag, number>();
+  for (const w of workouts) {
+    for (const group of workoutGroups(w)) out.set(group, (out.get(group) ?? 0) + 1);
+  }
+  return out;
+}
+
 /** A session's name, falling back to its tags when it was never named. */
 export function workoutTitle(workout: { name?: string; tags?: string[] }): string {
   const name = workout.name?.trim();

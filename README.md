@@ -18,7 +18,7 @@ either way.
 | **Cycles** | Peptides, PEDs, vitamins and supplements. A protocol is a compound plus a schedule; it drives a daily checklist, 30-day adherence, and the stock projections. |
 | **Blood** | Lab results imported from a PDF, a spreadsheet export or pasted text, then charted per marker against its reference range, with the protocols that were running over that window listed beside it. |
 | **Food** | Macro targets, a searchable food library, per-meal logging, and calorie/protein trends against target. |
-| **Train** | Exercise library, a live session logger built for one-handed use between sets, personal records, estimated 1RM trends, weekly volume and sets per muscle group. |
+| **Train** | Exercise library, a live session logger built for one-handed use between sets, a month of training read by body group, personal records, estimated 1RM trends, weekly volume and sets per muscle group. |
 | **Calendar** | A month at a glance: which days had doses, workouts, meals and readings, plus which days a protocol schedules a dose on. Tap any day for the full picture. |
 | **Stock** | What you have on the shelf, and when it runs out — worked out from your active protocols rather than entered by hand. Records how a vial was reconstituted and turns that into draw volumes. |
 
@@ -60,6 +60,29 @@ which depends on the compound — the projection says so rather than guessing.
 Logging a dose draws it out of stock automatically and opens a sealed spare when
 the current one runs dry.
 
+### Reading a month of training
+
+Sessions are named for the body group they train. Starting one asks the
+question outright — Chest, Back, Legs, Arms, Shoulders, Core, Cardio as seven
+tappable buttons — and the answer becomes both the session's name and its tag,
+rather than two facts that can disagree. "Something else" still starts an
+unnamed session, and the name stays editable.
+
+**Train → Calendar** turns that into a month you can read at a glance. Each
+trained day carries the group's name, not a dot: the main calendar has five
+kinds of event competing for one 44px square, so a workout gets a single dot
+there and can never say *which* workout. This grid has one subject, so it can.
+
+Tapping a group filters the month to it — the fastest way to answer "when did I
+last train back, and how long has it been?". Filtered-out days stay visible but
+dimmed, so the month keeps its shape instead of looking like time off. Below the
+grid, a count per group for the month says what is being neglected.
+
+Colour here is reinforcement, never identity. Seven categories cannot be told
+apart by hue alone once any two of them can land in neighbouring cells — the
+palette validator fails that outright — so every coloured cell also carries its
+group's name, and the label wears ink rather than the series colour.
+
 ### Reconstitution
 
 Peptides arrive as powder, and how much bacteriostatic water went into a
@@ -98,6 +121,7 @@ npm run dev          # http://localhost:5173
 | `npm run smoke:update` | The banner shown when the page is behind the server |
 | `npm run smoke:recon` | Reconstituting a vial: strength, draw volume and insulin units |
 | `npm run smoke:exercise-notes` | The setup note on an exercise, from the library through to mid-workout |
+| `npm run smoke:training-calendar` | Naming a session by body group, and reading a month by group |
 | `npm run serve` | Serves a built `dist/` with the dependency-free static server |
 | `npm run icons` | Regenerates the PWA icon set |
 

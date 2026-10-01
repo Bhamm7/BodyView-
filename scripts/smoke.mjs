@@ -149,7 +149,7 @@ const run = async () => {
   await go('/training');
   await page.getByRole('button', { name: '+ Workout' }).click();
   await page.locator('.sheet').waitFor();
-  await page.locator('.sheet').getByRole('button', { name: 'Empty workout' }).click();
+  await page.locator('.sheet').getByRole('button', { name: 'Something else' }).click();
   await page.waitForTimeout(600);
   await page.getByRole('button', { name: /Add exercise/ }).first().click();
   await page.locator('.sheet').waitFor();

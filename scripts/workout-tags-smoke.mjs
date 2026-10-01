@@ -52,7 +52,7 @@ const run = async () => {
   await page.waitForTimeout(1000);
   await page.getByRole('button', { name: '+ Workout' }).click();
   await page.locator('.sheet').waitFor();
-  await page.locator('.sheet').getByRole('button', { name: 'Empty workout' }).click();
+  await page.locator('.sheet').getByRole('button', { name: 'Something else' }).click();
   await page.waitForTimeout(900);
 
   const nameField = page.locator('input[placeholder*="Push day"]');
