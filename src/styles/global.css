@@ -1225,3 +1225,42 @@ table.data td.num, table.data th.num { text-align: right; }
 .group-pick:active {
   background: color-mix(in srgb, var(--group) 24%, transparent);
 }
+
+/* Rest timer: pinned under the header's right edge while a rest is running. */
+.rest-pill {
+  position: fixed;
+  top: calc(var(--header-h) + var(--safe-top) + var(--sp-2));
+  right: calc(var(--sp-4) + var(--safe-right));
+  z-index: 36;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px 6px 6px var(--sp-3);
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.25);
+}
+.rest-pill-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+.rest-pill-time {
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.rest-pill-close {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--accent-ink) 18%, transparent);
+  color: inherit;
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+}

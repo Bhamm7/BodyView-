@@ -8,6 +8,7 @@ import {
   isDaily,
   isScheduledOn,
   perDoseFromBasis,
+  protocolProgress,
   scheduleLabel,
 } from '../schedule';
 import { dateRange } from '../date';
@@ -250,5 +251,27 @@ describe('doseRate follows how the dose was entered', () => {
       doseBasis: 'dose',
     });
     assert.equal(doseRate(p).label, '160 mg/week');
+  });
+});
+
+describe('protocolProgress', () => {
+  const daily: Schedule = { kind: 'everyNDays', intervalDays: 1, timesPerDay: 1 };
+
+  it('counts weeks alongside days in a fixed cycle', () => {
+    const p = protocol(daily, { startDate: '2026-01-01', endDate: '2026-03-25' }); // 84 days
+    assert.equal(protocolProgress(p, '2026-01-01').label, 'Week 1 of 12 · Day 1 of 84');
+    assert.equal(protocolProgress(p, '2026-01-07').label, 'Week 1 of 12 · Day 7 of 84');
+    assert.equal(protocolProgress(p, '2026-01-08').label, 'Week 2 of 12 · Day 8 of 84');
+    assert.equal(protocolProgress(p, '2026-03-25').label, 'Week 12 of 12 · Day 84 of 84');
+  });
+
+  it('rounds a partial final week up', () => {
+    const p = protocol(daily, { startDate: '2026-01-01', endDate: '2026-01-10' });
+    assert.equal(protocolProgress(p, '2026-01-10').totalWeeks, 2);
+  });
+
+  it('counts weeks on an open-ended protocol', () => {
+    const p = protocol(daily, { startDate: '2026-01-01', endDate: undefined });
+    assert.equal(protocolProgress(p, '2026-01-15').label, 'Week 3 · Day 15');
   });
 });

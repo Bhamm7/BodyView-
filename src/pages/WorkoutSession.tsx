@@ -587,14 +587,14 @@ function RestTimer({ startedAt, onDismiss }: { startedAt: number; onDismiss: () 
     return () => clearInterval(tick);
   }, [startedAt]);
 
+  // Fixed to the top-right corner so it stays in view while scrolling
+  // down through exercises.
   return (
-    <div className="card row" style={{ marginBottom: 'var(--sp-4)', background: 'var(--surface-2)' }}>
-      <span className="grow">
-        <span className="card-title">Rest</span>
-        <div className="stat-value mono">{duration(elapsed)}</div>
-      </span>
-      <button className="btn ghost sm" onClick={onDismiss}>
-        Dismiss
+    <div className="rest-pill" role="timer" aria-label="Rest timer">
+      <span className="rest-pill-label">Rest</span>
+      <span className="mono rest-pill-time">{duration(elapsed)}</span>
+      <button className="rest-pill-close" onClick={onDismiss} aria-label="Dismiss rest timer">
+        ×
       </button>
     </div>
   );

@@ -180,14 +180,29 @@ export function scheduleLabel(schedule: Schedule): string {
 export function protocolProgress(
   protocol: Protocol,
   date: ISODate,
-): { day: number; total: number | null; label: string; percent: number | null } {
+): {
+  day: number;
+  total: number | null;
+  week: number;
+  totalWeeks: number | null;
+  label: string;
+  percent: number | null;
+} {
   const day = daysBetween(protocol.startDate, date) + 1;
+  // Days 1–7 are week 1. Before the start there is no week to speak of.
+  const week = Math.max(1, Math.ceil(day / 7));
   if (!protocol.endDate) {
-    return { day, total: null, label: `Day ${day}`, percent: null };
+    const label = day >= 1 ? `Week ${week} · Day ${day}` : `Day ${day}`;
+    return { day, total: null, week, totalWeeks: null, label, percent: null };
   }
   const total = daysBetween(protocol.startDate, protocol.endDate) + 1;
+  const totalWeeks = Math.max(1, Math.ceil(total / 7));
   const percent = total > 0 ? Math.min(100, Math.max(0, (day / total) * 100)) : null;
-  return { day, total, label: `Day ${day} of ${total}`, percent };
+  const label =
+    day >= 1
+      ? `Week ${Math.min(week, totalWeeks)} of ${totalWeeks} · Day ${day} of ${total}`
+      : `Day ${day} of ${total}`;
+  return { day, total, week, totalWeeks, label, percent };
 }
 
 /** Days left in the protocol window, or null when open-ended. */
