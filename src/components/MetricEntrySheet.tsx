@@ -1,11 +1,21 @@
 import { useEffect, useState } from 'react';
 import { db, removeRecord, uid } from '@/db/db';
 import { metricDef } from '@/db/metrics';
-import type { MetricEntry, MetricKey } from '@/db/types';
+import type { MetricEntry, MetricKey, VitalsSession } from '@/db/types';
 import { combineDateTime, formatTime, nowTime, today } from '@/lib/date';
 import { displayRange, metricUnit, toDisplay, toStored } from '@/lib/metricUnits';
 import { useSettings } from '@/hooks/useData';
-import { Field, NumberInput, Sheet, useToast } from './ui';
+import { SESSION_LABEL, sessionForTime } from '@/lib/vitals';
+import { Field, NumberInput, Segmented, Sheet, useToast } from './ui';
+
+type SessionChoice = VitalsSession | 'none';
+const SESSION_OPTIONS = [
+  { value: 'am', label: SESSION_LABEL.am },
+  { value: 'pm', label: SESSION_LABEL.pm },
+  { value: 'none', label: 'Neither' },
+] as const;
+/** Metrics that belong to a morning or night vitals session. */
+const SESSION_METRICS: MetricKey[] = ['bloodPressure', 'restingHr'];
 
 /**
  * Logs or edits a single metric reading. Every field gets a big numeric input
@@ -33,6 +43,8 @@ export function MetricEntrySheet({
   const [when, setWhen] = useState(date ?? today());
   const [time, setTime] = useState(nowTime());
   const [note, setNote] = useState('');
+  const [session, setSession] = useState<SessionChoice>('none');
+  const hasSession = SESSION_METRICS.includes(metric);
 
   // Reset the form whenever the sheet is opened for a different reading.
   useEffect(() => {
@@ -47,11 +59,14 @@ export function MetricEntrySheet({
       setWhen(entry.date);
       setTime(formatTime(entry.recordedAt) || nowTime());
       setNote(entry.note ?? '');
+      setSession(entry.session ?? 'none');
     } else {
       setValues(Object.fromEntries(def.fields.map((f) => [f.key, null])));
       setWhen(date ?? today());
-      setTime(nowTime());
+      const t = nowTime();
+      setTime(t);
       setNote('');
+      setSession(sessionForTime(t) ?? 'none');
     }
     // `settings` is intentionally read-only here: re-seeding on a unit change
     // mid-edit would overwrite what the user has typed.
@@ -74,6 +89,7 @@ export function MetricEntrySheet({
       recordedAt: combineDateTime(when, time),
       values: stored,
       note: note.trim() || undefined,
+      session: hasSession && session !== 'none' ? session : undefined,
     };
     await db.metrics.put(record);
     toast.show(entry ? `${def.label} updated` : `${def.label} logged`);
@@ -148,6 +164,15 @@ export function MetricEntrySheet({
           />
         </Field>
       </div>
+
+      {hasSession && (
+        <Field
+          label="Session"
+          hint="Morning and night readings feed the vitals averages. Neither keeps this one out of them."
+        >
+          <Segmented value={session} options={SESSION_OPTIONS} onChange={setSession} block label="Session" />
+        </Field>
+      )}
 
       <Field label="Note">
         <textarea

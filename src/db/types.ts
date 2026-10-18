@@ -73,7 +73,15 @@ export interface MetricEntry {
   /** Field key -> value, e.g. `{ systolic: 118, diastolic: 76 }`. */
   values: Record<string, number>;
   note?: string;
+  /**
+   * Morning or night vitals session this reading belongs to. Only tagged
+   * readings feed the morning/night averages; untagged ones (a midday check)
+   * are left out of them.
+   */
+  session?: VitalsSession;
 }
+
+export type VitalsSession = 'am' | 'pm';
 
 /* ------------------------------------------------------------------ */
 /* Compounds, protocols and dosing                                     */

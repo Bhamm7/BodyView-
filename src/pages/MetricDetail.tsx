@@ -14,6 +14,7 @@ import { num, signed } from '@/lib/format';
 import { metricUnit, toDisplay } from '@/lib/metricUnits';
 import { buildMetricChart, sortEntries, trendTone } from '@/lib/metricSeries';
 import { max as vmax, mean, min as vmin } from '@/lib/stats';
+import { SESSION_LABEL } from '@/lib/vitals';
 
 const WINDOWS = [
   { value: '30', label: '30d' },
@@ -73,6 +74,16 @@ export default function MetricDetail() {
         </button>
         <Segmented value={days} options={WINDOWS} onChange={setDays} label="Time range" />
       </div>
+
+      {(key === 'bloodPressure' || key === 'restingHr') && (
+        <button
+          className="btn block"
+          style={{ marginBottom: 'var(--sp-4)' }}
+          onClick={() => navigate('/health/vitals')}
+        >
+          🩺 Morning &amp; night averages ›
+        </button>
+      )}
 
       {history.length === 0 ? (
         <Card>
@@ -176,6 +187,7 @@ export default function MetricDetail() {
                     </span>
                     <span className="sub">
                       {formatDay(entry.date)} · {formatTime(entry.recordedAt)}
+                      {entry.session ? ` · ${SESSION_LABEL[entry.session]}` : ''}
                       {entry.note ? ` · ${entry.note}` : ''}
                     </span>
                   </span>

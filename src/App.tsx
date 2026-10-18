@@ -12,6 +12,7 @@ import Health from './pages/Health';
  * small on a phone.
  */
 const MetricDetail = lazy(() => import('./pages/MetricDetail'));
+const Vitals = lazy(() => import('./pages/Vitals'));
 const Bloodwork = lazy(() => import('./pages/Bloodwork'));
 const Calendar = lazy(() => import('./pages/Calendar'));
 const DayDetail = lazy(() => import('./pages/DayDetail'));
@@ -43,6 +44,7 @@ export default function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/health" element={<Health />} />
               <Route path="/bloodwork" element={<Bloodwork />} />
+              <Route path="/health/vitals" element={<Vitals />} />
               <Route path="/health/:metric" element={<MetricDetail />} />
               <Route path="/calendar" element={<Calendar />} />
               <Route path="/day/:date" element={<DayDetail />} />

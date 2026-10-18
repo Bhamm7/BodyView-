@@ -8,11 +8,13 @@ import { Page } from '@/components/Layout';
 import { Card, EmptyState, Segmented, Sheet } from '@/components/ui';
 import { Sparkline } from '@/components/sparkline';
 import { MetricEntrySheet } from '@/components/MetricEntrySheet';
+import { VitalsSessionSheet } from '@/components/VitalsSessionSheet';
 import { useSettings } from '@/hooks/useData';
-import { agoLabel, lastNDays } from '@/lib/date';
+import { agoLabel, lastNDays, shiftDate, today } from '@/lib/date';
 import { num, signed } from '@/lib/format';
 import { metricUnit, toDisplay } from '@/lib/metricUnits';
 import { dailyValues, latestEntry, trendTone } from '@/lib/metricSeries';
+import { bpSessions, sessionsBetween, splitAverage } from '@/lib/vitals';
 
 const WINDOWS = [
   { value: '30', label: '30d' },
@@ -27,6 +29,7 @@ export default function Health() {
   const [days, setDays] = useState<'30' | '90' | '365'>('30');
   const [logging, setLogging] = useState<MetricKey | null>(null);
   const [picking, setPicking] = useState(false);
+  const [loggingVitals, setLoggingVitals] = useState(false);
 
   const entries = useLiveQuery(() => db.metrics.toArray(), [], []) ?? [];
   const window = Number(days);
@@ -50,6 +53,15 @@ export default function Health() {
     [entries, dates, settings],
   );
 
+  const vitals7 = useMemo(() => {
+    const sessions = bpSessions(
+      entries.filter((e) => e.metric === 'bloodPressure'),
+      entries.filter((e) => e.metric === 'restingHr'),
+    );
+    const date = today();
+    return splitAverage(sessionsBetween(sessions, shiftDate(date, -6), date)).all;
+  }, [entries]);
+
   const tracked = cards.filter((c) => c.latest);
   const untracked = cards.filter((c) => !c.latest);
 
@@ -71,6 +83,30 @@ export default function Health() {
           label="Time range"
         />
       </div>
+
+      <button
+        className="card"
+        style={{ textAlign: 'left', cursor: 'pointer', width: '100%', marginBottom: 'var(--sp-4)' }}
+        onClick={() => navigate('/health/vitals')}
+      >
+        <div className="row" style={{ justifyContent: 'space-between' }}>
+          <span className="stat-label">
+            <span aria-hidden="true">🩺</span> Vitals · morning &amp; night
+          </span>
+          <span className="trail dim">›</span>
+        </div>
+        <div className="row" style={{ alignItems: 'baseline', gap: 'var(--sp-2)' }}>
+          <span className="stat-value">
+            {vitals7 ? `${num(vitals7.systolic, 0)}/${num(vitals7.diastolic, 0)}` : '—'}
+            <span className="unit">mmHg</span>
+          </span>
+          <span className="small dim">
+            {vitals7
+              ? `7-day average${vitals7.hr != null ? ` · HR ${num(vitals7.hr, 0)}` : ''}`
+              : 'Blood pressure and resting HR, averaged by session and week'}
+          </span>
+        </div>
+      </button>
 
       {tracked.length === 0 ? (
         <Card>
@@ -148,6 +184,22 @@ export default function Health() {
 
       <Sheet open={picking} title="What are you logging?" onClose={() => setPicking(false)}>
         <div className="list">
+          <button
+            className="list-row"
+            onClick={() => {
+              setPicking(false);
+              setLoggingVitals(true);
+            }}
+          >
+            <span className="lead" aria-hidden="true">
+              🩺
+            </span>
+            <span className="body">
+              <span className="title">Vitals session</span>
+              <span className="sub">Morning or night · 2–3 blood pressure readings + resting HR</span>
+            </span>
+            <span className="trail dim">›</span>
+          </button>
           {METRICS.map((def) => (
             <button
               key={def.key}
@@ -169,6 +221,8 @@ export default function Health() {
           ))}
         </div>
       </Sheet>
+
+      <VitalsSessionSheet open={loggingVitals} onClose={() => setLoggingVitals(false)} />
 
       {logging && (
         <MetricEntrySheet
