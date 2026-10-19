@@ -20,7 +20,8 @@
     "smoke:exercise-notes": "node scripts/exercise-notes-smoke.mjs",
     "smoke:training-calendar": "node scripts/training-calendar-smoke.mjs",
     "smoke:rest-timer-weeks": "node scripts/rest-timer-weeks-smoke.mjs",
-    "smoke:vitals": "node scripts/vitals-smoke.mjs"
+    "smoke:vitals": "node scripts/vitals-smoke.mjs",
+    "smoke:workout-backfill": "node scripts/workout-backfill-smoke.mjs"
   },
   "dependencies": {
     "date-fns": "^4.1.0",

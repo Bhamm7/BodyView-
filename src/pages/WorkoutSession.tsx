@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, removeRecords, uid } from '@/db/db';
+import { db, deleteWorkout, removeRecords, uid } from '@/db/db';
 import type { Exercise, SetLog, Workout } from '@/db/types';
 import { Page } from '@/components/Layout';
 import { Card, EmptyState, Field, isTouch, selectOnFocus, Sheet, useConfirm, useToast } from '@/components/ui';
 import { TemplateSheet } from '@/components/TemplateSheet';
 import { ExerciseSheet, ExerciseThumb } from '@/components/ExerciseSheet';
 import { useExerciseMap, useExercises } from '@/hooks/useData';
-import { formatDay, nowISO } from '@/lib/date';
+import { formatDay, nowISO, today, toISODate } from '@/lib/date';
 import { duration, num, pluralize } from '@/lib/format';
 import {
   e1rm,
@@ -110,13 +110,14 @@ export default function WorkoutSession() {
     if (done.length === 0) {
       const discard = await confirm('Nothing was logged. Discard this session?', 'Discard');
       if (!discard) return;
-      const orphans = await db.sets.where('workoutId').equals(workout.id).primaryKeys();
-      await removeRecords('sets', orphans);
-      await removeRecords('workouts', [workout.id]);
+      await deleteWorkout(workout.id);
       navigate('/training');
       return;
     }
-    await db.workouts.update(workout.id, { finishedAt: nowISO() });
+    // A session logged for an earlier day was not timed, so it gets no
+    // duration rather than one spanning the days since.
+    const backfilled = toISODate(new Date(workout.startedAt)) !== workout.date;
+    await db.workouts.update(workout.id, { finishedAt: backfilled ? workout.startedAt : nowISO() });
     toast.show('Session saved');
     navigate('/training');
   };
@@ -198,6 +199,20 @@ export default function WorkoutSession() {
 
       <SessionNotes workout={workout} />
 
+      <button
+        className="btn block danger"
+        style={{ marginTop: 'var(--sp-5)' }}
+        onClick={async () => {
+          const ok = await confirm('Delete this session and every set in it?', 'Delete');
+          if (!ok) return;
+          await deleteWorkout(workout.id);
+          toast.show('Session deleted');
+          navigate('/training');
+        }}
+      >
+        Delete session
+      </button>
+
       <ExercisePicker open={picking} onClose={() => setPicking(false)} onPick={addExercise} />
       {dialog}
 
@@ -256,6 +271,19 @@ function SessionHeader({ workout }: { workout: Workout }) {
               setName(trimmed);
               void db.workouts.update(workout.id, { name: trimmed });
             }
+          }}
+        />
+      </Field>
+
+      <Field label="Date">
+        <input
+          className="input"
+          type="date"
+          aria-label="Session date"
+          value={workout.date}
+          max={today()}
+          onChange={(e) => {
+            if (e.target.value) void db.workouts.update(workout.id, { date: e.target.value });
           }}
         />
       </Field>

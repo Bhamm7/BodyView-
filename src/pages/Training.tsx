@@ -1,10 +1,10 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, uid } from '@/db/db';
+import { db, deleteWorkout, uid } from '@/db/db';
 import type { TrainingPlan, Workout, WorkoutTemplate } from '@/db/types';
 import { Page } from '@/components/Layout';
-import { Card, EmptyState, Segmented, Sheet, StatTile, useToast } from '@/components/ui';
+import { Card, EmptyState, Field, Segmented, Sheet, StatTile, useConfirm, useToast } from '@/components/ui';
 import { BarSeries } from '@/components/charts';
 import { HBars } from '@/components/sparkline';
 import { useExerciseMap, useExercises, useOpenWorkout } from '@/hooks/useData';
@@ -46,6 +46,9 @@ export default function Training() {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('sessions');
   const [starting, setStarting] = useState(false);
+  /** The day the session is for. Usually today; earlier to log one after the fact. */
+  const [startDate, setStartDate] = useState(today());
+  const { confirm, dialog } = useConfirm();
 
   const openWorkout = useOpenWorkout();
   const workouts =
@@ -76,7 +79,7 @@ export default function Training() {
     const id = uid();
     const workout: Workout = {
       id,
-      date: today(),
+      date: startDate,
       // Naming a session for the group it trains is what makes a month of
       // training readable later; the tag follows from the same answer rather
       // than being a second thing to remember.
@@ -110,7 +113,7 @@ export default function Training() {
     }
 
     setStarting(false);
-    toast.show('Session started');
+    toast.show(startDate === today() ? 'Session started' : `Logging ${formatDay(startDate)}`);
     navigate(`/workout/${id}`);
   };
 
@@ -118,7 +121,13 @@ export default function Training() {
     <Page
       title="Training"
       actions={
-        <button className="btn primary sm" onClick={() => setStarting(true)}>
+        <button
+          className="btn primary sm"
+          onClick={() => {
+            setStartDate(today());
+            setStarting(true);
+          }}
+        >
           + Workout
         </button>
       }
@@ -138,6 +147,18 @@ export default function Training() {
             </span>
             <span className="btn primary sm">Resume</span>
           </button>
+          <button
+            className="btn sm danger"
+            style={{ marginTop: 'var(--sp-2)' }}
+            onClick={async () => {
+              const ok = await confirm('Delete this session and every set in it?', 'Delete');
+              if (!ok) return;
+              await deleteWorkout(openWorkout.id);
+              toast.show('Session deleted');
+            }}
+          >
+            Delete session
+          </button>
         </Card>
       )}
 
@@ -155,7 +176,20 @@ export default function Training() {
       {tab === 'exercises' && <ExercisesTab />}
 
       <Sheet open={starting} title="Start a workout" onClose={() => setStarting(false)}>
-        {dueToday.length > 0 && (
+        <Field
+          label="Date"
+          hint={startDate === today() ? undefined : `Logging a past session for ${formatDay(startDate)}`}
+        >
+          <input
+            className="input"
+            type="date"
+            aria-label="Workout date"
+            value={startDate}
+            max={today()}
+            onChange={(e) => setStartDate(e.target.value || today())}
+          />
+        </Field>
+        {startDate === today() && dueToday.length > 0 && (
           <>
             <div className="card-title">On the plan today</div>
             <div className="list">
@@ -217,6 +251,7 @@ export default function Training() {
           </>
         )}
       </Sheet>
+      {dialog}
     </Page>
   );
 }
@@ -614,3 +649,4 @@ function weekStart(date: string): string {
   const dow = (d.getDay() + 6) % 7; // Monday = 0
   return toISODate(addDays(d, -dow));
 }
+

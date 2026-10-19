@@ -246,6 +246,13 @@ export async function removeRecords(collection: SyncedCollection, ids: string[])
   notifyLocalChange();
 }
 
+/** Removes a workout and its sets, so no orphaned sets are left to sync. */
+export async function deleteWorkout(id: string): Promise<void> {
+  const sets = (await db.sets.where('workoutId').equals(id).primaryKeys()) as string[];
+  await removeRecords('sets', sets);
+  await removeRecords('workouts', [id]);
+}
+
 export const DEFAULT_SETTINGS: Settings = {
   id: 'settings',
   theme: 'auto',

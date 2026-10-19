@@ -124,6 +124,7 @@ npm run dev          # http://localhost:5173
 | `npm run smoke:training-calendar` | Naming a session by body group, and reading a month by group |
 | `npm run smoke:rest-timer-weeks` | Cycle weeks on each compound, and the rest timer pinned while scrolling a workout |
 | `npm run smoke:vitals` | Morning and night blood pressure sessions, resting HR, and their 7-day and weekly averages |
+| `npm run smoke:workout-backfill` | Logging a session for an earlier day, and deleting one still in progress |
 | `npm run serve` | Serves a built `dist/` with the dependency-free static server |
 | `npm run icons` | Regenerates the PWA icon set |
 
